@@ -34,11 +34,13 @@ venv.bak/
 # Streamlit & Configurações Sensíveis
 # =============================================================================
 .streamlit/secrets.toml
+.streamlit/config.toml
 .env
 .env.*
+*.env
 
 # =============================================================================
-# Arquivos Temporários, Relatórios Exportados e Cache
+# Arquivos Temporários, Relatórios Exportados e Logs
 # =============================================================================
 *.pdf
 *.csv
@@ -46,14 +48,19 @@ venv.bak/
 *.log
 scratch/
 temp/
+tmp/
+*.tmp
 
 # =============================================================================
-# IDEs e Editores
+# IDEs, Editores e Agentes de IA
 # =============================================================================
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
+.gemini/
+.agents/
+.cursor/
 
 # =============================================================================
 # Sistema Operacional

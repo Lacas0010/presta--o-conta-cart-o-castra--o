@@ -47,8 +47,24 @@ def render_modulo_clinica(supabase: Client):
     nome_empresarial = metadata.get("nome_empresarial") or metadata.get("razao_social") or metadata.get("name") or cnpj
     nome_clinica = metadata.get("nome_fantasia") or metadata.get("nome_clinica") or nome_empresarial
 
-    st.markdown(f"### Portal da Clínica: {nome_clinica}")
-    st.caption(f"Razão Social: {nome_empresarial} | CNPJ: {cnpj} | Programa Cartão Castração - SEPAN")
+    st.markdown(
+        f"""
+        <div class="sepan-header-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.45rem;">{nome_clinica}</h2>
+                    <p style="margin-top: 4px; font-size: 0.85rem; opacity: 0.95;">
+                        Razão Social: <strong>{nome_empresarial}</strong> &bull; CNPJ: <code>{cnpj}</code>
+                    </p>
+                </div>
+                <div style="margin-top: 6px;">
+                    <span class="sepan-badge badge-blue">Clínica Credenciada &bull; SEPAN</span>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     tab_insercao, tab_fechamento, tab_historico, tab_auditoria = st.tabs([
         "Lançamento de Atendimentos",
@@ -76,9 +92,11 @@ def render_modulo_clinica(supabase: Client):
 def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
     """Lançamento unitário de procedimentos cirúrgicos executados."""
     with st.container(border=True):
-        st.markdown("#### Registro de Atendimento")
+        st.markdown("#### Registro Individual de Atendimento")
+        st.caption("Preencha as informações do tutor, do animal e do faturamento para registrar a castração.")
 
         with st.form(key="form_cadastro_atendimento", clear_on_submit=True):
+            st.markdown("##### 1. Dados do Beneficiário / Tutor")
             col1, col2, col3 = st.columns([1, 1.2, 1.8])
             with col1:
                 data_atendimento = st.date_input(
@@ -87,10 +105,11 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                     format="DD/MM/YYYY"
                 )
             with col2:
-                cpf_beneficiario = st.text_input("CPF do Beneficiário *", placeholder="000.000.000-00")
+                cpf_beneficiario = st.text_input("CPF do Beneficiário *", placeholder="000.000.000-00", help="Informe os 11 dígitos do CPF do tutor")
             with col3:
-                nome_beneficiario = st.text_input("Nome do Beneficiário *", placeholder="Nome completo do tutor")
+                nome_beneficiario = st.text_input("Nome Completo do Beneficiário *", placeholder="Nome completo do tutor")
 
+            st.markdown("##### 2. Identificação do Animal")
             col4, col5, col6, col7, col8 = st.columns([1, 1, 1, 1.2, 1])
             with col4:
                 especie = st.selectbox("Espécie *", options=["Canina", "Felina"])
@@ -99,10 +118,11 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
             with col6:
                 porte = st.selectbox("Porte *", options=["Pequeno", "Médio", "Grande"])
             with col7:
-                numero_microchip = st.text_input("Nº do Microchip *", placeholder="Número do microchip")
+                numero_microchip = st.text_input("Nº do Microchip *", placeholder="Número do microchip implantado")
             with col8:
                 obito_opcao = st.radio("Veio a Óbito? *", options=["Não", "Sim"], index=0, horizontal=True)
 
+            st.markdown("##### 3. Faturamento e Documento Fiscal")
             col9, col10 = st.columns([1, 1])
             with col9:
                 valor_transacao = st.number_input(
@@ -110,7 +130,8 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                     min_value=0.0,
                     value=0.0,
                     step=10.0,
-                    format="%.2f"
+                    format="%.2f",
+                    help="Valor contratual correspondente ao procedimento realizado"
                 )
             with col10:
                 nfe_referencia = st.text_input("NF-e / Nota Fiscal *", placeholder="Número e série da NF-e")
@@ -183,7 +204,14 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
 
     st.divider()
 
-    st.markdown("#### Atendimentos Registrados na Sessão")
+    total_sessao = len(st.session_state.lista_conferencia)
+    col_sess_title, col_sess_badge = st.columns([3, 1])
+    with col_sess_title:
+        st.markdown(f"#### Atendimentos Gravados nesta Sessão ({total_sessao})")
+    with col_sess_badge:
+        if total_sessao > 0:
+            st.markdown(f"<div style='text-align: right;'><span class='sepan-badge badge-green'>{total_sessao} novos lançamentos</span></div>", unsafe_allow_html=True)
+
     if st.session_state.lista_conferencia:
         df_conferencia = pd.DataFrame(st.session_state.lista_conferencia)
         if "obito" in df_conferencia.columns:
@@ -218,7 +246,7 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
 
         st.dataframe(df_view, width="stretch", hide_index=True)
     else:
-        st.info("Nenhum atendimento registrado nesta sessão.")
+        st.info("Nenhum atendimento registrado nesta sessão de trabalho.")
 
 
 # -----------------------------------------------------------------------------
@@ -227,7 +255,21 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
 def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_empresarial: str = ""):
     """Consolidação mensal, visualização e exclusão de transações abertas."""
     st.markdown("#### Fechamento de Prestação de Contas")
-    st.caption("Consolidação dos procedimentos executados para envio formal à SEPAN.")
+    st.caption("Consolidação dos procedimentos executados no período para envio formal e emissão de parecer da SEPAN.")
+
+    st.markdown(
+        """
+        <div class="sepan-step-banner">
+            <div class="step-title">Fluxo Operacional de Fechamento do Lote</div>
+            <div class="step-desc">
+                <strong>1. Conferência e Ajustes:</strong> Revise e altere dados se necessário &bull; 
+                <strong>2. Declarações e Ocorrências:</strong> Confirme o relatório de intercorrências e óbitos &bull; 
+                <strong>3. Consolidação e Envio:</strong> Submeta formalmente para fiscalização da SEPAN
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     hoje = date.today()
     meses_opcoes = []
@@ -271,21 +313,31 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
 
     total_abertas = len(transacoes_abertas)
     valor_total_aberto = sum(float(t.get("valor_transacao", 0)) for t in transacoes_abertas)
+    total_caes = sum(1 for t in transacoes_abertas if str(t.get("especie", "")).strip().capitalize() == "Canina")
+    total_gatos = sum(1 for t in transacoes_abertas if str(t.get("especie", "")).strip().capitalize() == "Felina")
+    total_obitos = sum(1 for t in transacoes_abertas if t.get("obito") is True or str(t.get("obito", "")).lower() in ["true", "sim", "1"])
 
-    col_r1, col_r2 = st.columns(2)
+    col_r1, col_r2, col_r3, col_r4, col_r5 = st.columns(5)
     with col_r1:
-        st.metric("Procedimentos Pendentes de Envio", total_abertas)
+        st.metric("Procedimentos Pendentes", total_abertas)
     with col_r2:
+        st.metric("Cães Castrados", total_caes)
+    with col_r3:
+        st.metric("Gatos Castrados", total_gatos)
+    with col_r4:
+        st.metric("Óbitos Registrados", total_obitos)
+    with col_r5:
         st.metric(
-            "Valor Total do Período",
+            "Valor Total Acumulado",
             f"R$ {valor_total_aberto:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         )
 
     if total_abertas == 0:
-        st.info(f"Não há atendimentos avulsos pendentes de fechamento para {mes_rotulo}.")
+        st.info(f"Não há atendimentos avulsos pendentes de fechamento para a competência {mes_rotulo}.")
         return
 
     # Visualização prévia dos atendimentos abertos
+    st.divider()
     with st.expander(f"Visualizar os {total_abertas} atendimentos deste período", expanded=True):
         df_preview = pd.DataFrame(transacoes_abertas)
         if "obito" in df_preview.columns:
@@ -328,8 +380,8 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
         # ---------------------------------------------------------------------
         # Funcionalidade de Alteração e Exclusão de Atendimentos Abertos
         # ---------------------------------------------------------------------
-        st.markdown("##### Gerenciar Atendimentos do Período")
-        st.caption("Caso algum atendimento contenha dados incorretos ou necessite de ajuste, altere os campos diretamente ou exclua o registro se necessário:")
+        st.markdown("##### Gerenciar e Ajustar Atendimentos do Período")
+        st.caption("Caso algum atendimento contenha dados incorretos, altere os campos diretamente ou exclua o registro antes do fechamento:")
 
         dict_transacoes = {
             f"{t.get('data_atendimento', '')} | {t.get('nome_beneficiario', '')} (CPF: {t.get('cpf_beneficiario', '-')}, Microchip: {t.get('numero_microchip', '-')})": t
@@ -337,11 +389,11 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
         }
         labels_transacoes = list(dict_transacoes.keys())
 
-        tab_editar_item, tab_excluir_item = st.tabs(["Alterar Atendimento", "Excluir Atendimento"])
+        tab_editar_item, tab_excluir_item = st.tabs(["Alterar Dados do Atendimento", "Excluir Atendimento"])
 
         with tab_editar_item:
             item_edicao_label = st.selectbox(
-                "Selecione o atendimento para alterar os dados:",
+                "Selecione o atendimento para editar:",
                 options=labels_transacoes,
                 key=f"sel_edit_{mes_codigo}"
             )
@@ -548,6 +600,10 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
     ]
 
     if transacoes_com_obito:
+        st.warning(
+            f"Atenção: Foram identificados {len(transacoes_com_obito)} registro(s) de óbito nos atendimentos deste período. "
+            "O campo de 'Óbitos e Intercorrências Cirúrgicas' abaixo foi pré-preenchido automaticamente com esses dados para sua revisão."
+        )
         linhas_obito = []
         for t in transacoes_com_obito:
             esp = t.get("especie", "Animal")
@@ -734,16 +790,28 @@ def _render_tab_historico(supabase: Client, cnpj: str):
         motivo_retificacao = lote.get("motivo_retificacao")
         motivo_recusa = lote.get("motivo_recusa_retificacao")
 
+        # Mapeamento do status para badge visual
+        if status in ["Aprovada", "Homologado"]:
+            badge_class = "badge-green"
+        elif status in ["Aprovada com Ressalvas", "Apta com Necessidade de Saneamento", "Retificação Aprovada pela SEPAN"]:
+            badge_class = "badge-amber"
+        elif status in ["Solicitação de Retificação Pendente", "Enviado para Análise"]:
+            badge_class = "badge-blue"
+        elif status in ["Não Aprovada", "Retificação Recusada pela SEPAN"]:
+            badge_class = "badge-red"
+        else:
+            badge_class = "badge-slate"
+
         with st.container(border=True):
-            col_h1, col_h2, col_h3, col_h4 = st.columns([1.5, 1.2, 1, 1.3])
+            col_h1, col_h2, col_h3, col_h4 = st.columns([1.5, 1.2, 1.1, 1.2])
             with col_h1:
-                st.markdown(f"**Referência:** {mes_ref}")
-                st.caption(f"ID: {lote_id[:8]} | Envio: {data_envio}")
+                st.markdown(f"**Competência:** `{mes_ref}`")
+                st.caption(f"ID: {lote_id[:8]} &bull; Envio: {data_envio}")
             with col_h2:
-                st.write(f"Procedimentos: {total_proc}")
-                st.write(f"Valor: R$ {valor_tot:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                st.write(f"Procedimentos: **{total_proc}**")
+                st.write(f"Valor Total: **R$ {valor_tot:,.2f}**".replace(",", "X").replace(".", ",").replace("X", "."))
             with col_h3:
-                st.markdown(f"**Status:** `{status}`")
+                st.markdown(f"<div style='margin-top: 6px;'><span class='sepan-badge {badge_class}'>{status}</span></div>", unsafe_allow_html=True)
             with col_h4:
                 # Busca as transações vinculadas ao lote para gerar o PDF
                 try:

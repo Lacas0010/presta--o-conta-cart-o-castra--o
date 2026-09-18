@@ -1,6 +1,16 @@
+# Interface e Framework Web
 streamlit>=1.35.0
+
+# Backend e Banco de Dados Supabase (PostgreSQL / RLS / Auth)
 supabase>=2.4.0
-pandas>=2.0.0
 gotrue>=2.4.0
+
+# Manipulação e Análise de Dados
+pandas>=2.0.0
+
+# Validação Rigorosa de Documentos Oficiais (CPF e CNPJ)
 validate-docbr>=2.0.0
+
+# Motor de Geração de PDFs Oficiais (Anexo V e Pareceres SEPAN)
 fpdf2>=2.8.0
+

@@ -6,28 +6,25 @@
 
 ## 📋 Visão Geral
 
-O **Sistema de Fiscalização e Prestação de Contas do Programa Cartão Castração** é uma plataforma institucional desenvolvida em Python e Streamlit, integrada ao Supabase (PostgreSQL, Autenticação e Row Level Security - RLS).
+O **Sistema de Fiscalização e Prestação de Contas do Programa Cartão Castração** é uma plataforma institucional de gestão e conformidade pública desenvolvida em Python e Streamlit, integrada ao Supabase (PostgreSQL, Autenticação e Row Level Security - RLS).
 
-O sistema organiza o fluxo operacional entre as **Clínicas Veterinárias Credenciadas** e a **Comissão de Gestão e Fiscalização da SEPAN**, permitindo:
-- O registro individual e auditável de procedimentos cirúrgicos executados (castração e microchipagem).
-- O fechamento e envio formal de prestações de contas mensais em lotes.
-- A geração automatizada de relatórios em PDF em conformidade com as normas oficiais da SEPAN e padrões do processo eletrônico (SEI).
-- A fiscalização técnica detalhada, controle de conformidade cadastral (CRIA), cruzamento com notas fiscais e emissão de pareceres conclusivos.
+O sistema estrutura todo o ciclo de prestação de contas entre as **Clínicas Veterinárias Credenciadas** e a **Comissão de Gestão e Fiscalização da SEPAN**, garantindo rastreabilidade, integridade documental, auditoria em tempo real e integração direta com os processos eletrônicos do **SEI-GDF**.
 
 ---
 
 ## 🏛️ Estrutura e Módulos do Sistema
 
 ```
-├── app.py                 # Ponto de entrada da aplicação, roteamento por perfil e painel admin
-├── auth.py                # Módulo de login, criação de contas (PJ e PF) e guardrails de acesso
-├── modulo_clinica.py      # Portal da Clínica (Lançamentos, Fechamento de Lote e Histórico)
-├── modulo_comissao.py     # Painel de Fiscalização (Fila de Lotes, Pareceres e Auditoria Geral)
-├── gerador_pdf.py         # Motor de geração de PDFs oficiais com fpdf2 (Anexo V e Parecer SEPAN)
-├── gestao_usuarios.py     # Backoffice administrativo para gestão de permissões e roles
-├── schema.sql             # Definição do banco de dados (Tabelas, RLS, Políticas e Índices)
-├── requirements.txt       # Dependências do projeto Python
-├── .gitignore             # Regras de exclusão para versionamento Git
+├── app.py                 # Ponto de entrada, injeção de Design System (Light/Dark) e roteamento de perfis
+├── auth.py                # Autenticação institucional, cadastro PJ/PF e guardrails de acesso
+├── modulo_clinica.py      # Portal da Clínica (Lançamentos, Fechamento, Histórico e Auditoria Própria)
+├── modulo_comissao.py     # Painel de Fiscalização (Fila de Lotes, Deliberação de Retificações, Pareceres e Logs)
+├── auditoria.py           # Trilha de auditoria e gravação padronizada de eventos de rastreabilidade
+├── gerador_pdf.py         # Motor de geração de PDFs oficiais (Anexo V, Pareceres SEPAN e Texto SEI)
+├── gestao_usuarios.py     # Backoffice administrativo para homologação e gestão de roles
+├── schema.sql             # Definição do banco de dados (Tabelas, RLS, Políticas, Logs e Índices)
+├── requirements.txt       # Dependências organizadas do projeto Python
+├── .gitignore             # Regras de exclusão para versionamento Git seguro
 └── .streamlit/
     └── secrets.toml       # Credenciais de acesso ao Supabase (URL e chaves de API)
 ```
@@ -38,32 +35,53 @@ O sistema organiza o fluxo operacional entre as **Clínicas Veterinárias Creden
 
 | Perfil | Identificador | Descrição das Permissões |
 | :--- | :--- | :--- |
-| **Clínica Credenciada** | `clinica` | Lançamento de atendimentos individuais, consolidação de faturamento mensal (Lotes), saneamento de pendências e emissão do Relatório Mensal em PDF. |
-| **Comissão de Gestão** | `comissao` | Análise técnica dos lotes recebidos, avaliação de conformidade (Itens 5 a 9), homologação com emissão de parecer para o SEI e auditoria de toda a base. |
-| **Administrador** | `admin` | Controle de configurações globais (toggle de validação estrita de CPF/CNPJ) e visualização de todos os módulos. |
-| **Leitor / Pendente** | `leitor` | Cadastro inicial de servidores em processo de liberação de permissões pela administração. |
+| **Clínica Credenciada** | `clinica` | Registro individual de procedimentos, alteração direta e saneamento de atendimentos, fechamento de lotes mensais, solicitação de retificação, estorno e auditoria restrita aos seus atendimentos. |
+| **Comissão de Gestão** | `comissao` | Fila de fiscalização de lotes, deliberação de retificações (aceite/recusa fundamentada), emissão de pareceres em 10 itens com teto de CRIA, geração de PDF e texto SEI nato-digital, auditoria geral e consulta de logs. |
+| **Administrador** | `admin` | Controle de configurações globais do sistema (toggle de validação de CPF/CNPJ), homologação de usuários e acesso irrestrito. |
+| **Leitor / Pendente** | `leitor` | Cadastro inicial de servidores em processo de liberação de permissões pela administração da SEPAN. |
 
 ---
 
-## 📄 Documentos Oficiais em PDF Gerados
+## 🌟 Principais Funcionalidades
 
-1. **Relatório Mensal de Prestação de Contas (Clínica)**:
-   - Identificação cadastral completa: Nome Empresarial, Nome Fantasia, Endereço, CNPJ, Responsável, Telefones e E-mail de cadastro.
-   - Resumo sintético dos procedimentos por espécie, sexo, porte e microchips implantados.
-   - Relação detalhada de transações com controle por data, CPF do beneficiário, animal, valor e número de NF-e.
-   - Declaração formal de responsabilidade legal com assinatura.
+### 🏥 1. Portal da Clínica Credenciada
+- **Registro Individual de Atendimentos**: Lançamento com separação visual em 3 blocos (Tutor, Animal e NF-e), validação matemática opcional de CPF e registro de intercorrência cirúrgica / óbito (`Sim` / `Não`).
+- **Fechamento de Lote Mensal**:
+  - Guia operacional em 3 etapas e grid com 5 métricas consolidadas (Total, Cães, Gatos, Óbitos e Valor Total).
+  - **Edição Direta**: Alteração de qualquer campo do atendimento aberto diretamente no painel sem necessidade de exclusão e relançamento.
+  - **Relato de Óbitos Automatizado**: Pré-preenchimento automático da narrativa com microchips e tutores dos animais com óbito registrado no período, mantendo campo aberto para notas clínicas adicionais.
+  - **Declaração Formal de Responsabilidade Legal**.
+- **Histórico de Lotes & Retificação**:
+  - Acompanhamento com badges coloridos de status.
+  - Download do Relatório Oficial Anexo V em PDF.
+  - **Fluxo de Retificação**: Solicitação formal de retificação de lotes já enviados à SEPAN com justificativa.
+  - **Estorno Seguro**: Desvinculação dos atendimentos para correções na aba de fechamento após autorização da comissão.
+- **Auditoria de Atendimentos da Clínica**: Pesquisa avançada multi-critério restrita aos atendimentos do estabelecimento com exportação em CSV.
 
-2. **Relatório de Prestação de Contas e Fiscalização (Comissão SEPAN / SEI)**:
-   - Identificação com número de Processo SEI, fiscal responsável e período analisado.
-   - Resumo executivo com indicadores do CRIA e identificação de não conformidades.
-   - Apuração da movimentação financeira e varredura do intervalo de numeração de notas fiscais.
-   - Seções analíticas individualizadas:
-     - `5- MONITORAMENTO DOS CADASTROS NO CRIA`
-     - `6- PONTOS DE ATENÇÃO`
-     - `7- NOTAS PENDENTES`
-     - `8- ANÁLISE DE CONFORMIDADE`
-     - `9- DETERMINAÇÕES E PROVIDÊNCIAS`
-   - Seção 10 com a decisão formal da Comissão (`Aprovada`, `Aprovada com Ressalvas`, `Apta com Necessidade de Saneamento`, `Não Aprovada`), fundamentação técnica e assinatura.
+---
+
+### 🛡️ 2. Painel da Comissão de Gestão (Servidores SEPAN)
+- **Dashboard de Topo**: Indicadores em tempo real (Lotes Pendentes, Homologados, Retificações Solicitadas e Valor em Análise).
+- **Fila de Fiscalização de Lotes**:
+  - Seleção limpa com estado vazio orientativo (`index=None`).
+  - **Deliberação de Retificações**: Painel para Aceitar (libera estorno para a clínica) ou Recusar o pedido de retificação (com fundamentação formal exibida para a clínica).
+  - **Parecer Técnico em 10 Itens**:
+    - `Item 5`: Monitoramento no CRIA com trava de segurança impedindo quantidade superior ao total do lote.
+    - `Itens 6 e 7`: Pontos de Atenção e Notas Pendentes de envio.
+    - `Item 8`: Análise de Conformidade dos serviços e valores.
+    - `Item 9`: Determinações e Providências adotadas.
+    - `Item 10`: Decisão Final (`Aprovada`, `Aprovada com Ressalvas`, `Apta com Necessidade de Saneamento`, `Não Aprovada`).
+- **Geração de Documentos Oficiais (SEI-GDF)**:
+  - **Aba PDF**: Download do Relatório Técnico Oficial de Fiscalização.
+  - **Aba Texto SEI (Nato-Digital)**: Texto estruturado para cópia e colagem direta no editor de documentos do SEI, viabilizando a assinatura eletrônica dos fiscais no processo, com botão de homologação e bloqueio de integridade.
+- **Auditoria Geral de Atendimentos**: Busca global com filtros por clínica, período, tutor, animal, microchip, NF-e e status, com métricas e exportação CSV.
+- **Histórico de Auditoria (Logs)**: Linha do tempo cronológica de rastreabilidade de todas as ações e alterações no sistema.
+
+---
+
+### 🎨 3. Design System & Acessibilidade Visual
+- **Tipografia Moderna**: Fonte `Inter` (Google Fonts) em toda a aplicação.
+- **Suporte Total a Light Mode e Dark Mode**: Ajuste automático de contrastes, variáveis CSS dinâmicas, fundos adaptáveis e badges de status luminosos no tema escuro.
 
 ---
 
@@ -100,7 +118,7 @@ SUPABASE_SERVICE_ROLE_KEY = "sua-service-role-secret-key"
 
 ### 4. Configurar o Banco de Dados (Supabase)
 
-Acesse o **SQL Editor** no painel do Supabase e execute o conteúdo do arquivo [`schema.sql`](schema.sql) para criar as tabelas (`configuracoes_sistema`, `lotes_prestacao`, `relacao_transacoes`), políticas de segurança (RLS) e índices.
+Acesse o **SQL Editor** no painel do Supabase e execute o conteúdo do arquivo [`schema.sql`](schema.sql) para criar as tabelas (`configuracoes_sistema`, `lotes_prestacao`, `relacao_transacoes`, `logs_auditoria`), políticas de segurança (RLS), triggers e índices.
 
 ---
 
@@ -120,8 +138,10 @@ streamlit run gestao_usuarios.py
 
 ---
 
-## 🔒 Segurança e Integridade
+## 🔒 Segurança e Conformidade Pública
 
-- **Row Level Security (RLS)** habilitado em todas as tabelas do Supabase.
-- **Validação de Documentos**: Suporte à validação matemática de dígitos verificadores de CPF e CNPJ via `validate-docbr`, com controle de ativação pelo painel administrativo.
-- **Tipografia Formal**: Documentos em PDF gerados em conformidade com o padrão institucional do Governo do Distrito Federal.
+- **Row Level Security (RLS)** ativo em todas as tabelas do banco de dados.
+- **Trilha de Auditoria Imutável**: Gravação de eventos de criação, edição, exclusão, estorno, deliberação de retificação e homologação de pareceres.
+- **Validação Rigorosa de Documentos**: Validação de CPF e CNPJ via `validate-docbr`.
+- **Compatibilidade SEI-GDF**: Documentos nato-digitais estruturados para assinatura eletrônica direta no processo administrativo.
+

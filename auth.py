@@ -36,9 +36,9 @@ def render_auth_page(supabase: Client):
     with col2:
         st.markdown(
             """
-            <div style='text-align: center; margin-bottom: 20px;'>
-                <h2 style='color: #1E3A8A; margin-bottom: 2px;'>Programa Cartão Castração</h2>
-                <h5 style='color: #4B5563; font-weight: normal; margin-top: 0;'>Secretaria Extraordinária de Proteção Animal - SEPAN</h5>
+            <div class="sepan-auth-header">
+                <h2>Programa Cartão Castração</h2>
+                <h5>Secretaria Extraordinária de Proteção Animal - SEPAN</h5>
             </div>
             """,
             unsafe_allow_html=True,
@@ -55,8 +55,8 @@ def render_auth_page(supabase: Client):
 
         st.markdown(
             """
-            <div style='text-align: center; color: #9CA3AF; font-size: 0.8rem; margin-top: 15px;'>
-                Prefeitura Municipal • Sistema de Fiscalização e Prestação de Contas
+            <div class="sepan-auth-footer">
+                Prefeitura Municipal &bull; Sistema de Fiscalização e Prestação de Contas
             </div>
             """,
             unsafe_allow_html=True,

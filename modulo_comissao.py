@@ -150,18 +150,21 @@ def _render_tab_lotes(supabase: Client):
         st.info("Nenhum lote de prestação de contas submetido até o momento.")
         return
 
-    pendentes_count = len(df_lotes[df_lotes["status"].isin(["Enviado para Análise", "Apta com Necessidade de Saneamento", "Solicitação de Retificação Pendente"])])
+    pendentes_count = len(df_lotes[df_lotes["status"].isin(["Enviado para Análise", "Apta com Necessidade de Saneamento"])])
     aprovados_count = len(df_lotes[df_lotes["status"].isin(["Aprovada", "Aprovada com Ressalvas"])])
+    retif_count = len(df_lotes[df_lotes["status"].isin(["Solicitação de Retificação Pendente"]) | (df_lotes.get("status_retificacao") == "pendente")]) if "status_retificacao" in df_lotes.columns else len(df_lotes[df_lotes["status"].isin(["Solicitação de Retificação Pendente"])])
     valor_pendente = df_lotes[df_lotes["status"].isin(["Enviado para Análise", "Apta com Necessidade de Saneamento", "Solicitação de Retificação Pendente"])]["valor_total"].sum()
 
-    col_k1, col_k2, col_k3 = st.columns(3)
+    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
     with col_k1:
-        st.metric("Lotes Pendentes de Análise", pendentes_count)
+        st.metric("Lotes Pendentes de Parecer", pendentes_count)
     with col_k2:
         st.metric("Lotes Homologados", aprovados_count)
     with col_k3:
+        st.metric("Retificações Solicitadas", retif_count)
+    with col_k4:
         st.metric(
-            "Valor em Análise",
+            "Valor Total em Análise",
             f"R$ {valor_pendente:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         )
 
@@ -247,7 +250,7 @@ def _render_tab_lotes(supabase: Client):
         nome_c = row.get("nome_clinica") or row.get("cnpj_clinica")
         mes = row.get("mes_referencia", "")
         valor = float(row.get("valor_total", 0.0))
-        label = f"[{status}] {nome_c} | Competência: {mes} | R$ {valor:,.2f} (Lote: {str(lote_id)[:8]})"
+        label = f"[{status}] {nome_c} | Competência: {mes} | R$ {valor:,.2f} (ID: {str(lote_id)[:8]})"
 
         lotes_dict[label] = row
         lote_options.append(label)
@@ -255,15 +258,25 @@ def _render_tab_lotes(supabase: Client):
     col_sel, _ = st.columns([2.5, 1])
     with col_sel:
         escolha_lote = st.selectbox(
-            f"Selecione o Lote para Análise ({len(lote_options)} localizados):",
+            f"Selecione o Lote para Fiscalização ({len(lote_options)} localizados):",
             options=lote_options,
             index=None,
-            placeholder="Selecione um lote para iniciar a análise...",
+            placeholder="Selecione um lote no menu para abrir a análise técnica...",
             key="comissao_escolha_lote_sel"
         )
 
     if not escolha_lote:
-        st.info("Selecione um lote de prestação de contas no campo acima para visualizar os dados, atendimentos vinculados e emitir o parecer técnico.")
+        st.markdown(
+            """
+            <div class="sepan-empty-banner">
+                <div class="empty-title">Nenhum Lote Selecionado</div>
+                <div class="empty-desc">
+                    Selecione um lote de prestação de contas no menu acima para auditar os procedimentos cirúrgicos, emitir o parecer técnico da comissão e gerar os documentos oficiais para o SEI.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         return
 
     selected_row = lotes_dict[escolha_lote]
@@ -277,18 +290,33 @@ def _render_tab_lotes(supabase: Client):
     obitos = selected_row.get("obitos_relato") or "Sem relato informado."
     reclamacoes = selected_row.get("reclamacoes_relato") or "Sem relato informado."
 
-    with st.container(border=True):
-        st.markdown(f"**Lote: {nome_clinica} ({mes_ref})**")
+    # Mapeamento do status para badge visual
+    if status_atual in ["Aprovada", "Homologado"]:
+        badge_status_class = "badge-green"
+    elif status_atual in ["Aprovada com Ressalvas", "Apta com Necessidade de Saneamento", "Retificação Aprovada pela SEPAN"]:
+        badge_status_class = "badge-amber"
+    elif status_atual in ["Solicitação de Retificação Pendente", "Enviado para Análise"]:
+        badge_status_class = "badge-blue"
+    elif status_atual in ["Não Aprovada", "Retificação Recusada pela SEPAN"]:
+        badge_status_class = "badge-red"
+    else:
+        badge_status_class = "badge-slate"
 
-        col_d1, col_d2, col_d3, col_d4 = st.columns(4)
+    with st.container(border=True):
+        col_hdr1, col_hdr2 = st.columns([3, 1])
+        with col_hdr1:
+            st.markdown(f"### {nome_clinica} &bull; Competência {mes_ref}")
+            st.caption(f"CNPJ: `{cnpj_clinica}` &bull; ID do Lote: `{str(lote_id)[:8]}`")
+        with col_hdr2:
+            st.markdown(f"<div style='text-align: right; margin-top: 8px;'><span class='sepan-badge {badge_status_class}'>{status_atual}</span></div>", unsafe_allow_html=True)
+
+        col_d1, col_d2, col_d3 = st.columns(3)
         with col_d1:
-            st.write(f"**CNPJ:** `{cnpj_clinica}`")
+            st.metric("Procedimentos no Lote", total_proc)
         with col_d2:
-            st.write(f"**Procedimentos:** `{total_proc}`")
+            st.metric("Valor Faturado (R$)", f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         with col_d3:
-            st.write(f"**Valor Faturado:** `R$ {valor_total:,.2f}`")
-        with col_d4:
-            st.write(f"**Status Atual:** `{status_atual}`")
+            st.metric("Status do Processo", status_atual)
 
         st.divider()
 
