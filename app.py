@@ -107,7 +107,49 @@ def inject_custom_css():
         }
 
         /* =====================================================================
-           CARTÕES DE MÉTRICAS (stMetric)
+           KEYFRAMES E ANIMAÇÕES SUAVES
+           ===================================================================== */
+        @keyframes sepanFadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes sepanScaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes sepanPulseSubtle {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.25);
+            }
+            50% {
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+            }
+        }
+
+        /* Aplicação de Animação de Entrada */
+        [data-testid="stAppViewContainer"] .main .block-container {
+            animation: sepanFadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        [data-testid="stTabs"] [data-baseweb="tab-panel"] {
+            animation: sepanFadeInUp 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* =====================================================================
+           CARTÕES DE MÉTRICAS (stMetric) COM MICRO-ANIMAÇÃO
            ===================================================================== */
         [data-testid="stMetric"] {
             background-color: var(--sepan-card-bg) !important;
@@ -115,22 +157,42 @@ def inject_custom_css():
             border-radius: 8px !important;
             padding: 14px 18px !important;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-            transition: all 0.2s ease-in-out;
+            transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease !important;
+            animation: sepanFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         [data-testid="stMetric"]:hover {
+            transform: translateY(-3px) !important;
             border-color: var(--sepan-primary) !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1) !important;
         }
         [data-testid="stMetricLabel"] {
             font-size: 0.85rem !important;
             font-weight: 500 !important;
             color: var(--text-color, inherit) !important;
             opacity: 0.85;
+            transition: color 0.2s ease;
         }
         [data-testid="stMetricValue"] {
             font-size: 1.55rem !important;
             font-weight: 700 !important;
             color: var(--text-color, inherit) !important;
+        }
+
+        /* =====================================================================
+           BOTÕES COM FEEDBACK TÁTIL & HOVER
+           ===================================================================== */
+        [data-testid="stButton"] button {
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+        }
+        [data-testid="stButton"] button:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12) !important;
+        }
+        [data-testid="stButton"] button:active {
+            transform: translateY(1px) !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
         }
 
         /* =====================================================================
@@ -140,6 +202,11 @@ def inject_custom_css():
             border-radius: 8px !important;
             border: 1px solid var(--sepan-card-border) !important;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            animation: sepanFadeInUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        [data-testid="stVerticalBlockBorderWrapper"]:hover {
+            border-color: rgba(128, 128, 128, 0.35) !important;
         }
 
         /* =====================================================================
@@ -155,8 +222,11 @@ def inject_custom_css():
             font-size: 0.95rem;
             padding: 8px 16px;
             border-radius: 6px 6px 0 0;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             color: var(--text-color, inherit);
+        }
+        [data-testid="stTabs"] [data-baseweb="tab"]:hover {
+            background-color: var(--sepan-card-bg);
         }
         [data-testid="stTabs"] [aria-selected="true"] {
             color: var(--sepan-primary) !important;
@@ -164,7 +234,7 @@ def inject_custom_css():
         }
 
         /* =====================================================================
-           BADGES DE STATUS INSTITUCIONAIS
+           BADGES DE STATUS INSTITUCIONAIS COM HOVER
            ===================================================================== */
         .sepan-badge {
             display: inline-block;
@@ -174,6 +244,10 @@ def inject_custom_css():
             border-radius: 12px;
             letter-spacing: 0.3px;
             white-space: nowrap;
+            transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+        }
+        .sepan-badge:hover {
+            transform: scale(1.04);
         }
         .badge-green {
             background-color: var(--badge-green-bg) !important;
@@ -184,6 +258,7 @@ def inject_custom_css():
             background-color: var(--badge-amber-bg) !important;
             color: var(--badge-amber-text) !important;
             border: 1px solid var(--badge-amber-border) !important;
+            animation: sepanPulseSubtle 3.5s infinite ease-in-out;
         }
         .badge-blue {
             background-color: var(--badge-blue-bg) !important;
@@ -211,6 +286,12 @@ def inject_custom_css():
             padding: 18px 24px;
             margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            animation: sepanScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .sepan-header-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
         }
         .sepan-header-card h2, .sepan-header-card h3 {
             color: var(--sepan-header-text) !important;
@@ -235,6 +316,7 @@ def inject_custom_css():
             padding: 12px 16px;
             border-radius: 4px;
             margin-bottom: 18px;
+            animation: sepanFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sepan-step-banner .step-title {
             font-weight: 600;
@@ -255,6 +337,7 @@ def inject_custom_css():
             padding: 24px;
             text-align: center;
             margin-top: 15px;
+            animation: sepanFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sepan-empty-banner .empty-title {
             font-weight: 600;
@@ -267,9 +350,22 @@ def inject_custom_css():
             margin-top: 4px;
         }
 
+        /* Alerts e Notificações com Animação */
+        [data-testid="stAlert"] {
+            animation: sepanFadeInUp 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border-radius: 6px !important;
+        }
+
+        /* Dataframe / Tabelas com Animação */
+        [data-testid="stDataFrame"] {
+            animation: sepanFadeInUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border-radius: 6px;
+        }
+
         /* Identificação na Barra Lateral */
         .sepan-sidebar-brand {
             padding: 8px 0 4px 0;
+            animation: sepanFadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sepan-sidebar-brand .brand-title {
             font-size: 1.25rem;
@@ -287,6 +383,7 @@ def inject_custom_css():
         .sepan-auth-header {
             text-align: center;
             margin-bottom: 20px;
+            animation: sepanScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sepan-auth-header h2 {
             color: var(--sepan-primary) !important;
