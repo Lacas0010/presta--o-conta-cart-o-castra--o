@@ -50,15 +50,17 @@ def render_modulo_clinica(supabase: Client):
     st.markdown(
         f"""
         <div class="sepan-header-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
-                    <h2 style="margin: 0; font-size: 1.45rem;">{nome_clinica}</h2>
-                    <p style="margin-top: 4px; font-size: 0.85rem; opacity: 0.95;">
-                        Razão Social: <strong>{nome_empresarial}</strong> &bull; CNPJ: <code>{cnpj}</code>
+                    <h2 style="margin: 0; font-size: 1.45rem; color: #ffffff;">{nome_clinica}</h2>
+                    <p style="margin-top: 4px; font-size: 0.88rem; color: #e0e7ff;">
+                        Razão Social: <strong style="color: #ffffff;">{nome_empresarial}</strong> &bull; CNPJ: <span style="font-family: monospace; font-weight: 600; padding: 2px 7px; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: #ffffff;">{cnpj}</span>
                     </p>
                 </div>
-                <div style="margin-top: 6px;">
-                    <span class="sepan-badge badge-blue">Clínica Credenciada &bull; SEPAN</span>
+                <div>
+                    <span style="display: inline-block; background: rgba(255,255,255,0.18); color: #ffffff; border: 1px solid rgba(255,255,255,0.35); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.3px;">
+                        Clínica Credenciada &bull; SEPAN
+                    </span>
                 </div>
             </div>
         </div>

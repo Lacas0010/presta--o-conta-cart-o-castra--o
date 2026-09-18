@@ -38,75 +38,6 @@ def inject_custom_css():
         }
 
         /* =====================================================================
-           VARIÁVEIS DE TEMA (LIGHT / DARK AWARE)
-           ===================================================================== */
-        :root {
-            --sepan-primary: #1e40af;
-            --sepan-brand: #1e3a8a;
-            --sepan-subtext: #475569;
-            --sepan-card-bg: var(--secondary-background-color, #f8fafc);
-            --sepan-card-border: rgba(128, 128, 128, 0.2);
-            --sepan-header-gradient: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-            --sepan-header-text: #ffffff;
-            --sepan-header-sub: #e0e7ff;
-            
-            /* Badges Light */
-            --badge-green-bg: #dcfce7;
-            --badge-green-text: #166534;
-            --badge-green-border: #bbf7d0;
-            
-            --badge-amber-bg: #fef3c7;
-            --badge-amber-text: #92400e;
-            --badge-amber-border: #fde68a;
-            
-            --badge-blue-bg: #e0e7ff;
-            --badge-blue-text: #3730a3;
-            --badge-blue-border: #c7d2fe;
-            
-            --badge-red-bg: #fee2e2;
-            --badge-red-text: #991b1b;
-            --badge-red-border: #fecaca;
-            
-            --badge-slate-bg: #f1f5f9;
-            --badge-slate-text: #475569;
-            --badge-slate-border: #e2e8f0;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --sepan-primary: #60a5fa;
-                --sepan-brand: #93c5fd;
-                --sepan-subtext: #94a3b8;
-                --sepan-card-bg: var(--secondary-background-color, #1e293b);
-                --sepan-card-border: rgba(255, 255, 255, 0.12);
-                --sepan-header-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-                --sepan-header-text: #f8fafc;
-                --sepan-header-sub: #94a3b8;
-                
-                /* Badges Dark */
-                --badge-green-bg: rgba(34, 197, 94, 0.18);
-                --badge-green-text: #4ade80;
-                --badge-green-border: rgba(34, 197, 94, 0.35);
-                
-                --badge-amber-bg: rgba(245, 158, 11, 0.18);
-                --badge-amber-text: #fbbf24;
-                --badge-amber-border: rgba(245, 158, 11, 0.35);
-                
-                --badge-blue-bg: rgba(59, 130, 246, 0.18);
-                --badge-blue-text: #93c5fd;
-                --badge-blue-border: rgba(59, 130, 246, 0.35);
-                
-                --badge-red-bg: rgba(239, 68, 68, 0.18);
-                --badge-red-text: #f87171;
-                --badge-red-border: rgba(239, 68, 68, 0.35);
-                
-                --badge-slate-bg: rgba(148, 163, 184, 0.18);
-                --badge-slate-text: #cbd5e1;
-                --badge-slate-border: rgba(148, 163, 184, 0.35);
-            }
-        }
-
-        /* =====================================================================
            KEYFRAMES E ANIMAÇÕES SUAVES
            ===================================================================== */
         @keyframes sepanFadeInUp {
@@ -149,33 +80,30 @@ def inject_custom_css():
         }
 
         /* =====================================================================
-           CARTÕES DE MÉTRICAS (stMetric) COM MICRO-ANIMAÇÃO
+           CARTÕES DE MÉTRICAS (stMetric) TOTALMENTE ADAPTATIVOS
            ===================================================================== */
         [data-testid="stMetric"] {
-            background-color: var(--sepan-card-bg) !important;
-            border: 1px solid var(--sepan-card-border) !important;
+            background-color: rgba(128, 128, 128, 0.08) !important;
+            border: 1px solid rgba(128, 128, 128, 0.22) !important;
             border-radius: 8px !important;
             padding: 14px 18px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
             transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease !important;
             animation: sepanFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         [data-testid="stMetric"]:hover {
             transform: translateY(-3px) !important;
-            border-color: var(--sepan-primary) !important;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1) !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
         }
         [data-testid="stMetricLabel"] {
             font-size: 0.85rem !important;
-            font-weight: 500 !important;
-            color: var(--text-color, inherit) !important;
-            opacity: 0.85;
-            transition: color 0.2s ease;
+            font-weight: 600 !important;
+            opacity: 0.82 !important;
         }
         [data-testid="stMetricValue"] {
             font-size: 1.55rem !important;
             font-weight: 700 !important;
-            color: var(--text-color, inherit) !important;
         }
 
         /* =====================================================================
@@ -200,7 +128,7 @@ def inject_custom_css():
            ===================================================================== */
         [data-testid="stVerticalBlockBorderWrapper"] {
             border-radius: 8px !important;
-            border: 1px solid var(--sepan-card-border) !important;
+            border: 1px solid rgba(128, 128, 128, 0.2) !important;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
             animation: sepanFadeInUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -214,7 +142,7 @@ def inject_custom_css():
            ===================================================================== */
         [data-testid="stTabs"] [data-baseweb="tab-list"] {
             gap: 6px;
-            border-bottom: 2px solid var(--sepan-card-border);
+            border-bottom: 2px solid rgba(128, 128, 128, 0.2);
             padding-bottom: 2px;
         }
         [data-testid="stTabs"] [data-baseweb="tab"] {
@@ -223,14 +151,13 @@ def inject_custom_css():
             padding: 8px 16px;
             border-radius: 6px 6px 0 0;
             transition: all 0.2s ease;
-            color: var(--text-color, inherit);
         }
         [data-testid="stTabs"] [data-baseweb="tab"]:hover {
-            background-color: var(--sepan-card-bg);
+            background-color: rgba(128, 128, 128, 0.1);
         }
         [data-testid="stTabs"] [aria-selected="true"] {
-            color: var(--sepan-primary) !important;
-            border-bottom: 3px solid var(--sepan-primary) !important;
+            color: #3b82f6 !important;
+            border-bottom: 3px solid #3b82f6 !important;
         }
 
         /* =====================================================================
@@ -238,7 +165,7 @@ def inject_custom_css():
            ===================================================================== */
         .sepan-badge {
             display: inline-block;
-            padding: 3px 10px;
+            padding: 3px 11px;
             font-size: 0.78rem;
             font-weight: 600;
             border-radius: 12px;
@@ -250,89 +177,102 @@ def inject_custom_css():
             transform: scale(1.04);
         }
         .badge-green {
-            background-color: var(--badge-green-bg) !important;
-            color: var(--badge-green-text) !important;
-            border: 1px solid var(--badge-green-border) !important;
+            background-color: rgba(34, 197, 94, 0.18) !important;
+            color: #16a34a !important;
+            border: 1px solid rgba(34, 197, 94, 0.45) !important;
         }
         .badge-amber {
-            background-color: var(--badge-amber-bg) !important;
-            color: var(--badge-amber-text) !important;
-            border: 1px solid var(--badge-amber-border) !important;
+            background-color: rgba(245, 158, 11, 0.18) !important;
+            color: #d97706 !important;
+            border: 1px solid rgba(245, 158, 11, 0.45) !important;
             animation: sepanPulseSubtle 3.5s infinite ease-in-out;
         }
         .badge-blue {
-            background-color: var(--badge-blue-bg) !important;
-            color: var(--badge-blue-text) !important;
-            border: 1px solid var(--badge-blue-border) !important;
+            background-color: rgba(59, 130, 246, 0.18) !important;
+            color: #2563eb !important;
+            border: 1px solid rgba(59, 130, 246, 0.45) !important;
         }
         .badge-red {
-            background-color: var(--badge-red-bg) !important;
-            color: var(--badge-red-text) !important;
-            border: 1px solid var(--badge-red-border) !important;
+            background-color: rgba(239, 68, 68, 0.18) !important;
+            color: #dc2626 !important;
+            border: 1px solid rgba(239, 68, 68, 0.45) !important;
         }
         .badge-slate {
-            background-color: var(--badge-slate-bg) !important;
-            color: var(--badge-slate-text) !important;
-            border: 1px solid var(--badge-slate-border) !important;
+            background-color: rgba(148, 163, 184, 0.18) !important;
+            color: #64748b !important;
+            border: 1px solid rgba(148, 163, 184, 0.45) !important;
         }
 
         /* =====================================================================
            CARTÃO DE CABEÇALHO INSTITUCIONAL
            ===================================================================== */
         .sepan-header-card {
-            background: var(--sepan-header-gradient) !important;
-            border: 1px solid var(--sepan-card-border);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
             border-radius: 10px;
-            padding: 18px 24px;
+            padding: 20px 26px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
             animation: sepanScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            color: #ffffff !important;
         }
         .sepan-header-card:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
         .sepan-header-card h2, .sepan-header-card h3 {
-            color: var(--sepan-header-text) !important;
+            color: #ffffff !important;
             margin: 0 0 4px 0 !important;
             font-weight: 700;
         }
         .sepan-header-card p {
-            color: var(--sepan-header-sub) !important;
+            color: #e0e7ff !important;
             margin: 0 !important;
             font-size: 0.9rem;
+        }
+        .sepan-header-card strong {
+            color: #ffffff !important;
+        }
+        .sepan-header-card code {
+            background: rgba(255, 255, 255, 0.18) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            padding: 2px 7px !important;
+            border-radius: 4px !important;
+            font-family: monospace !important;
+            font-weight: 600 !important;
         }
 
         /* =====================================================================
            BANNER DE ETAPAS & AVISOS
            ===================================================================== */
         .sepan-step-banner {
-            background-color: var(--sepan-card-bg) !important;
-            border-left: 4px solid var(--sepan-primary) !important;
-            border-top: 1px solid var(--sepan-card-border);
-            border-right: 1px solid var(--sepan-card-border);
-            border-bottom: 1px solid var(--sepan-card-border);
-            padding: 12px 16px;
-            border-radius: 4px;
+            background-color: rgba(59, 130, 246, 0.08) !important;
+            border-left: 4px solid #3b82f6 !important;
+            border-top: 1px solid rgba(128, 128, 128, 0.2) !important;
+            border-right: 1px solid rgba(128, 128, 128, 0.2) !important;
+            border-bottom: 1px solid rgba(128, 128, 128, 0.2) !important;
+            padding: 14px 18px;
+            border-radius: 6px;
             margin-bottom: 18px;
             animation: sepanFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sepan-step-banner .step-title {
-            font-weight: 600;
-            color: var(--sepan-primary);
-            font-size: 0.92rem;
+            font-weight: 700;
+            color: #3b82f6 !important;
+            font-size: 0.95rem;
         }
         .sepan-step-banner .step-desc {
-            font-size: 0.82rem;
-            color: var(--sepan-subtext);
-            margin-top: 3px;
+            font-size: 0.85rem;
+            opacity: 0.88;
+            margin-top: 4px;
         }
 
         /* Banner de Estado Vazio */
         .sepan-empty-banner {
-            background-color: var(--sepan-card-bg);
-            border: 1px dashed var(--sepan-card-border);
+            background-color: rgba(128, 128, 128, 0.06) !important;
+            border: 1px dashed rgba(128, 128, 128, 0.28) !important;
             border-radius: 8px;
             padding: 24px;
             text-align: center;
@@ -340,13 +280,13 @@ def inject_custom_css():
             animation: sepanFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sepan-empty-banner .empty-title {
-            font-weight: 600;
-            color: var(--sepan-primary);
+            font-weight: 700;
+            color: #3b82f6 !important;
             font-size: 1.05rem;
         }
         .sepan-empty-banner .empty-desc {
             font-size: 0.85rem;
-            color: var(--sepan-subtext);
+            opacity: 0.82;
             margin-top: 4px;
         }
 
@@ -364,19 +304,19 @@ def inject_custom_css():
 
         /* Identificação na Barra Lateral */
         .sepan-sidebar-brand {
-            padding: 8px 0 4px 0;
+            padding: 6px 0 2px 0;
             animation: sepanFadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .sepan-sidebar-brand .brand-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--sepan-primary);
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #3b82f6 !important;
             letter-spacing: -0.5px;
         }
         .sepan-sidebar-brand .brand-subtitle {
-            font-size: 0.8rem;
-            color: var(--sepan-subtext);
-            font-weight: 500;
+            font-size: 0.82rem;
+            opacity: 0.8;
+            font-weight: 600;
         }
 
         /* Auth Header & Footer */
@@ -553,7 +493,9 @@ def render_sidebar(user, role):
         st.markdown(f"**{user_name}**")
         st.caption(f"{user.email}")
         if cnpj_val:
-            st.caption(f"CNPJ: `{cnpj_val}`")
+            st.markdown(f"<p style='margin: 4px 0 10px 0; font-size: 0.82rem;'>CNPJ: <span style='font-family: monospace; font-weight: 600; padding: 2px 6px; background: rgba(128,128,128,0.18); border-radius: 4px;'>{cnpj_val}</span></p>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
         role_badges = {
             "clinica": ("Clínica Credenciada", "badge-blue"),
