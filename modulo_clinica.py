@@ -95,7 +95,11 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
         st.markdown("#### Registro Individual de Atendimento")
         st.caption("Preencha as informações do tutor, do animal e do faturamento para registrar a castração.")
 
-        with st.form(key="form_cadastro_atendimento", clear_on_submit=True):
+        if "msg_sucesso_atendimento" in st.session_state:
+            st.success(st.session_state.pop("msg_sucesso_atendimento"))
+
+        form_version = st.session_state.get("form_atendimento_version", 0)
+        with st.form(key=f"form_cadastro_atendimento_{form_version}", clear_on_submit=False):
             st.markdown("##### 1. Dados do Beneficiário / Tutor")
             col1, col2, col3 = st.columns([1, 1.2, 1.8])
             with col1:
@@ -153,12 +157,12 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                     erros.append("NF-e / Nota Fiscal")
 
                 if erros:
-                    st.error(f"Campos obrigatórios não preenchidos: {', '.join(erros)}.")
+                    st.error(f"Campos obrigatórios não preenchidos: {', '.join(erros)}. Os demais dados preenchidos foram preservados.")
                 else:
                     # Validação matemática de CPF se configurada no sistema
                     if is_validacao_ativa(supabase):
                         if not CPF().validate(cpf_beneficiario.strip()):
-                            st.error("CPF do Beneficiário inválido. Verifique os dígitos informados.")
+                            st.error("⚠️ **CPF do Beneficiário inválido!** Verifique os dígitos informados. Os demais dados preenchidos foram preservados.")
                             return
 
                     veio_a_obito = (obito_opcao == "Sim")
@@ -197,7 +201,8 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                                 descricao=f"Atendimento registrado para {nome_beneficiario.strip()} (Microchip: {numero_microchip.strip()}, Espécie: {especie}, Valor: R$ {float(valor_transacao):.2f})",
                                 detalhes=dados_transacao
                             )
-                            st.success(f"Atendimento de {nome_beneficiario.strip()} gravado com sucesso.")
+                            st.session_state.form_atendimento_version = form_version + 1
+                            st.session_state["msg_sucesso_atendimento"] = f"Atendimento de {nome_beneficiario.strip()} gravado com sucesso."
                             st.rerun()
                         except Exception as e:
                             st.error(f"Falha ao registrar atendimento: {str(e)}")
@@ -514,12 +519,12 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
                         erros_edit.append("NF-e / Nota Fiscal")
 
                     if erros_edit:
-                        st.error(f"Campos obrigatórios não preenchidos: {', '.join(erros_edit)}.")
+                        st.error(f"Campos obrigatórios não preenchidos: {', '.join(erros_edit)}. As alterações foram mantidas.")
                     else:
                         if is_validacao_ativa(supabase):
                             if not CPF().validate(edit_cpf.strip()):
-                                st.error("CPF do Beneficiário inválido. Verifique os dígitos informados.")
-                                st.stop()
+                                st.error("⚠️ **CPF do Beneficiário inválido!** Verifique os dígitos informados. As alterações foram mantidas.")
+                                return
 
                         dados_editados = {
                             "data_atendimento": edit_data.isoformat(),
@@ -692,8 +697,8 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
             else:
                 if is_validacao_ativa(supabase):
                     if not CPF().validate(cpf_representante.strip()):
-                        st.error("CPF do Representante Legal inválido. Verifique os dígitos informados.")
-                        st.stop()
+                        st.error("⚠️ **CPF do Representante Legal inválido!** Verifique os dígitos informados. Os dados preenchidos foram preservados.")
+                        return
 
                 with st.spinner("Enviando lote..."):
                     try:
