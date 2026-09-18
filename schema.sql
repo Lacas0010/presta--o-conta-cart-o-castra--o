@@ -60,6 +60,17 @@ ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS qtd_cria INTEGER DEF
 ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS inconsistencias_cria TEXT;
 ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS notas_pendentes TEXT;
 ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS providencias TEXT;
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS parecer_bloqueado BOOLEAN DEFAULT false;
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS processo_sei VARCHAR(100);
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS membro_analise VARCHAR(255);
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS data_bloqueio_parecer TIMESTAMP WITH TIME ZONE;
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS solicitacao_retificacao BOOLEAN DEFAULT false;
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS status_retificacao VARCHAR(50);
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS motivo_retificacao TEXT;
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS motivo_recusa_retificacao TEXT;
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS data_solicitacao_retificacao TIMESTAMP WITH TIME ZONE;
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS analisado_retificacao_por VARCHAR(255);
+ALTER TABLE public.lotes_prestacao ADD COLUMN IF NOT EXISTS data_resposta_retificacao TIMESTAMP WITH TIME ZONE;
 
 -- 3. Criação da Tabela relacao_transacoes (Atendimentos Individuais)
 CREATE TABLE IF NOT EXISTS public.relacao_transacoes (
@@ -78,12 +89,14 @@ CREATE TABLE IF NOT EXISTS public.relacao_transacoes (
     nfe_referencia VARCHAR(100) NOT NULL,
     status_validacao VARCHAR(50) DEFAULT 'pendente' NOT NULL,
     observacoes_comissao TEXT,
+    obito BOOLEAN DEFAULT false,
     lote_id UUID REFERENCES public.lotes_prestacao(id) ON DELETE SET NULL
 );
 
 -- Atualizações de Colunas em relacao_transacoes (Retrocompatibilidade)
 ALTER TABLE public.relacao_transacoes ADD COLUMN IF NOT EXISTS nome_clinica VARCHAR(255);
 ALTER TABLE public.relacao_transacoes ADD COLUMN IF NOT EXISTS lote_id UUID REFERENCES public.lotes_prestacao(id) ON DELETE SET NULL;
+ALTER TABLE public.relacao_transacoes ADD COLUMN IF NOT EXISTS obito BOOLEAN DEFAULT false;
 
 -- 4. Índices para Otimização de Consultas
 CREATE INDEX IF NOT EXISTS idx_transacoes_cnpj ON public.relacao_transacoes(cnpj_clinica);
@@ -142,3 +155,34 @@ ON public.lotes_prestacao FOR INSERT TO authenticated WITH CHECK (true);
 
 CREATE POLICY "Permitir atualizacao de lotes para autenticados" 
 ON public.lotes_prestacao FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+-- 7. Criação da Tabela logs_auditoria (Histórico de Alterações e Rastreabilidade)
+CREATE TABLE IF NOT EXISTS public.logs_auditoria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    cnpj_clinica VARCHAR(20),
+    nome_clinica VARCHAR(255),
+    usuario_email VARCHAR(255),
+    usuario_tipo VARCHAR(50), -- 'clinica' ou 'comissao'
+    tipo_entidade VARCHAR(50) NOT NULL, -- 'atendimento', 'lote', 'parecer', 'retificacao', 'configuracao'
+    acao VARCHAR(100) NOT NULL, -- 'criacao', 'alteracao', 'exclusao', 'estorno', 'emissao_parecer', 'bloqueio_parecer', 'solicitacao_retificacao', 'aceite_retificacao', 'recusa_retificacao'
+    referencia_id VARCHAR(100), -- ID do lote ou ID do atendimento
+    descricao TEXT NOT NULL,
+    detalhes_json JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_logs_cnpj ON public.logs_auditoria(cnpj_clinica);
+CREATE INDEX IF NOT EXISTS idx_logs_created_at ON public.logs_auditoria(created_at);
+CREATE INDEX IF NOT EXISTS idx_logs_tipo_entidade ON public.logs_auditoria(tipo_entidade);
+CREATE INDEX IF NOT EXISTS idx_logs_acao ON public.logs_auditoria(acao);
+
+ALTER TABLE public.logs_auditoria ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permitir leitura de logs para autenticados" ON public.logs_auditoria;
+DROP POLICY IF EXISTS "Permitir insercao de logs para autenticados" ON public.logs_auditoria;
+
+CREATE POLICY "Permitir leitura de logs para autenticados" 
+ON public.logs_auditoria FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Permitir insercao de logs para autenticados" 
+ON public.logs_auditoria FOR INSERT TO authenticated WITH CHECK (true);

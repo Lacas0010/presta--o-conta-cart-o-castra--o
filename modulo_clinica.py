@@ -12,12 +12,14 @@ Responsável por:
 
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import datetime, date
 import calendar
+import re
 from supabase import Client
 from validate_docbr import CPF
 from auth import is_validacao_ativa
 from gerador_pdf import gerar_pdf_anexo_v
+from auditoria import registrar_log_auditoria
 
 
 def init_session_state():
@@ -48,10 +50,11 @@ def render_modulo_clinica(supabase: Client):
     st.markdown(f"### Portal da Clínica: {nome_clinica}")
     st.caption(f"Razão Social: {nome_empresarial} | CNPJ: {cnpj} | Programa Cartão Castração - SEPAN")
 
-    tab_insercao, tab_fechamento, tab_historico = st.tabs([
+    tab_insercao, tab_fechamento, tab_historico, tab_auditoria = st.tabs([
         "Lançamento de Atendimentos",
         "Fechamento de Lote Mensal",
-        "Histórico de Lotes"
+        "Histórico de Lotes",
+        "Auditoria de Atendimentos"
     ])
 
     with tab_insercao:
@@ -62,6 +65,9 @@ def render_modulo_clinica(supabase: Client):
 
     with tab_historico:
         _render_tab_historico(supabase, cnpj)
+
+    with tab_auditoria:
+        _render_tab_auditoria_clinica(supabase, cnpj, nome_clinica)
 
 
 # -----------------------------------------------------------------------------
@@ -76,7 +82,7 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
             col1, col2, col3 = st.columns([1, 1.2, 1.8])
             with col1:
                 data_atendimento = st.date_input(
-                    "Data do Atendimento *",
+                    "Data da Castração *",
                     value=date.today(),
                     format="DD/MM/YYYY"
                 )
@@ -85,7 +91,7 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
             with col3:
                 nome_beneficiario = st.text_input("Nome do Beneficiário *", placeholder="Nome completo do tutor")
 
-            col4, col5, col6, col7 = st.columns([1, 1, 1, 1.2])
+            col4, col5, col6, col7, col8 = st.columns([1, 1, 1, 1.2, 1])
             with col4:
                 especie = st.selectbox("Espécie *", options=["Canina", "Felina"])
             with col5:
@@ -94,9 +100,11 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                 porte = st.selectbox("Porte *", options=["Pequeno", "Médio", "Grande"])
             with col7:
                 numero_microchip = st.text_input("Nº do Microchip *", placeholder="Número do microchip")
-
-            col8, col9 = st.columns([1, 1])
             with col8:
+                obito_opcao = st.radio("Veio a Óbito? *", options=["Não", "Sim"], index=0, horizontal=True)
+
+            col9, col10 = st.columns([1, 1])
+            with col9:
                 valor_transacao = st.number_input(
                     "Valor do Procedimento (R$) *",
                     min_value=0.0,
@@ -104,7 +112,7 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                     step=10.0,
                     format="%.2f"
                 )
-            with col9:
+            with col10:
                 nfe_referencia = st.text_input("NF-e / Nota Fiscal *", placeholder="Número e série da NF-e")
 
             st.caption("* Campos de preenchimento obrigatório.")
@@ -132,6 +140,7 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                             st.error("CPF do Beneficiário inválido. Verifique os dígitos informados.")
                             return
 
+                    veio_a_obito = (obito_opcao == "Sim")
                     dados_transacao = {
                         "data_atendimento": data_atendimento.isoformat(),
                         "cnpj_clinica": cnpj.strip(),
@@ -142,14 +151,31 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                         "sexo": sexo,
                         "porte": porte,
                         "numero_microchip": numero_microchip.strip(),
+                        "obito": veio_a_obito,
                         "valor_transacao": float(valor_transacao),
                         "nfe_referencia": nfe_referencia.strip(),
                     }
 
                     with st.spinner("Gravando atendimento..."):
                         try:
-                            supabase.table("relacao_transacoes").insert(dados_transacao).execute()
+                            try:
+                                supabase.table("relacao_transacoes").insert(dados_transacao).execute()
+                            except Exception as ex_ins:
+                                err_s = str(ex_ins)
+                                if "PGRST204" in err_s or "Could not find" in err_s or "obito" in err_s:
+                                    payload_seguro = {k: v for k, v in dados_transacao.items() if k != "obito"}
+                                    supabase.table("relacao_transacoes").insert(payload_seguro).execute()
+                                else:
+                                    raise ex_ins
+
                             st.session_state.lista_conferencia.insert(0, dados_transacao)
+                            registrar_log_auditoria(
+                                supabase, cnpj, nome_clinica,
+                                tipo_entidade="atendimento",
+                                acao="criacao",
+                                descricao=f"Atendimento registrado para {nome_beneficiario.strip()} (Microchip: {numero_microchip.strip()}, Espécie: {especie}, Valor: R$ {float(valor_transacao):.2f})",
+                                detalhes=dados_transacao
+                            )
                             st.success(f"Atendimento de {nome_beneficiario.strip()} gravado com sucesso.")
                             st.rerun()
                         except Exception as e:
@@ -160,18 +186,34 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
     st.markdown("#### Atendimentos Registrados na Sessão")
     if st.session_state.lista_conferencia:
         df_conferencia = pd.DataFrame(st.session_state.lista_conferencia)
-        colunas_exibicao = {
-            "data_atendimento": "Data",
-            "nome_beneficiario": "Beneficiário",
-            "especie": "Espécie",
-            "valor_transacao": "Valor (R$)",
-            "nfe_referencia": "NF-e",
-        }
-        df_view = df_conferencia[list(colunas_exibicao.keys())].copy()
-        df_view["valor_transacao"] = df_view["valor_transacao"].apply(
-            lambda v: f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        )
-        df_view["data_atendimento"] = pd.to_datetime(df_view["data_atendimento"]).dt.strftime("%d/%m/%Y")
+        if "obito" in df_conferencia.columns:
+            df_conferencia["obito_view"] = df_conferencia["obito"].apply(
+                lambda o: "Sim" if o is True or str(o).lower() in ["true", "sim", "1"] else "Não"
+            )
+            colunas_exibicao = {
+                "data_atendimento": "Data",
+                "nome_beneficiario": "Beneficiário",
+                "especie": "Espécie",
+                "obito_view": "Óbito",
+                "valor_transacao": "Valor (R$)",
+                "nfe_referencia": "NF-e",
+            }
+        else:
+            colunas_exibicao = {
+                "data_atendimento": "Data",
+                "nome_beneficiario": "Beneficiário",
+                "especie": "Espécie",
+                "valor_transacao": "Valor (R$)",
+                "nfe_referencia": "NF-e",
+            }
+        cols_validas = [c for c in colunas_exibicao.keys() if c in df_conferencia.columns]
+        df_view = df_conferencia[cols_validas].copy()
+        if "valor_transacao" in df_view.columns:
+            df_view["valor_transacao"] = df_view["valor_transacao"].apply(
+                lambda v: f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        if "data_atendimento" in df_view.columns:
+            df_view["data_atendimento"] = pd.to_datetime(df_view["data_atendimento"]).dt.strftime("%d/%m/%Y")
         df_view = df_view.rename(columns=colunas_exibicao)
 
         st.dataframe(df_view, width="stretch", hide_index=True)
@@ -246,34 +288,242 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
     # Visualização prévia dos atendimentos abertos
     with st.expander(f"Visualizar os {total_abertas} atendimentos deste período", expanded=True):
         df_preview = pd.DataFrame(transacoes_abertas)
-        cols_preview = ["data_atendimento", "nome_beneficiario", "cpf_beneficiario", "especie", "numero_microchip", "valor_transacao", "nfe_referencia"]
+        if "obito" in df_preview.columns:
+            df_preview["obito_view"] = df_preview["obito"].apply(
+                lambda o: "Sim" if o is True or str(o).lower() in ["true", "sim", "1"] else "Não"
+            )
+            cols_preview = ["data_atendimento", "nome_beneficiario", "cpf_beneficiario", "especie", "numero_microchip", "obito_view", "valor_transacao", "nfe_referencia"]
+            cols_map_preview = {
+                "data_atendimento": "Data",
+                "nome_beneficiario": "Beneficiário",
+                "cpf_beneficiario": "CPF",
+                "especie": "Espécie",
+                "numero_microchip": "Microchip",
+                "obito_view": "Óbito",
+                "valor_transacao": "Valor (R$)",
+                "nfe_referencia": "NF-e"
+            }
+        else:
+            cols_preview = ["data_atendimento", "nome_beneficiario", "cpf_beneficiario", "especie", "numero_microchip", "valor_transacao", "nfe_referencia"]
+            cols_map_preview = {
+                "data_atendimento": "Data",
+                "nome_beneficiario": "Beneficiário",
+                "cpf_beneficiario": "CPF",
+                "especie": "Espécie",
+                "numero_microchip": "Microchip",
+                "valor_transacao": "Valor (R$)",
+                "nfe_referencia": "NF-e"
+            }
         cols_presentes = [c for c in cols_preview if c in df_preview.columns]
-        st.dataframe(df_preview[cols_presentes], width="stretch", hide_index=True)
+        df_show = df_preview[cols_presentes].copy()
+        if "data_atendimento" in df_show.columns:
+            df_show["data_atendimento"] = pd.to_datetime(df_show["data_atendimento"]).dt.strftime("%d/%m/%Y")
+        if "valor_transacao" in df_show.columns:
+            df_show["valor_transacao"] = df_show["valor_transacao"].apply(
+                lambda v: f"R$ {float(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        df_show = df_show.rename(columns=cols_map_preview)
+        st.dataframe(df_show, width="stretch", hide_index=True)
 
         # ---------------------------------------------------------------------
-        # Funcionalidade de Exclusão de Registro Aberto
+        # Funcionalidade de Alteração e Exclusão de Atendimentos Abertos
         # ---------------------------------------------------------------------
-        st.markdown("##### Excluir Atendimento Incorreto")
-        st.caption("Caso algum atendimento deste período tenha sido lançado com erro, selecione-o para exclusão:")
+        st.markdown("##### Gerenciar Atendimentos do Período")
+        st.caption("Caso algum atendimento contenha dados incorretos ou necessite de ajuste, altere os campos diretamente ou exclua o registro se necessário:")
 
-        opcoes_exclusao = {
-            f"{t.get('data_atendimento', '')} | {t.get('nome_beneficiario', '')} (Microchip: {t.get('numero_microchip', '-')}) - ID: {str(t.get('id', ''))[:8]}": t.get("id")
+        dict_transacoes = {
+            f"{t.get('data_atendimento', '')} | {t.get('nome_beneficiario', '')} (CPF: {t.get('cpf_beneficiario', '-')}, Microchip: {t.get('numero_microchip', '-')})": t
             for t in transacoes_abertas
         }
+        labels_transacoes = list(dict_transacoes.keys())
 
-        col_exc1, col_exc2 = st.columns([3, 1])
-        with col_exc1:
-            item_excluir_label = st.selectbox(
-                "Selecione o registro para exclusão:",
-                options=list(opcoes_exclusao.keys()),
-                key=f"sel_exc_{mes_codigo}",
-                label_visibility="collapsed"
+        tab_editar_item, tab_excluir_item = st.tabs(["Alterar Atendimento", "Excluir Atendimento"])
+
+        with tab_editar_item:
+            item_edicao_label = st.selectbox(
+                "Selecione o atendimento para alterar os dados:",
+                options=labels_transacoes,
+                key=f"sel_edit_{mes_codigo}"
             )
-        with col_exc2:
-            if st.button("Excluir Registro", key=f"btn_exc_{mes_codigo}", width="stretch", type="secondary"):
-                id_para_excluir = opcoes_exclusao[item_excluir_label]
+
+            transacao_selecionada = dict_transacoes[item_edicao_label]
+            transacao_id = transacao_selecionada["id"]
+
+            dt_atual = date.today()
+            if transacao_selecionada.get("data_atendimento"):
+                try:
+                    dt_atual = datetime.strptime(str(transacao_selecionada["data_atendimento"])[:10], "%Y-%m-%d").date()
+                except Exception:
+                    dt_atual = date.today()
+
+            val_esp = transacao_selecionada.get("especie", "Canina")
+            idx_esp = 0 if val_esp == "Canina" else 1
+
+            val_sex = transacao_selecionada.get("sexo", "Macho")
+            idx_sex = 0 if val_sex == "Macho" else 1
+
+            val_porte = transacao_selecionada.get("porte", "Pequeno")
+            idx_porte = ["Pequeno", "Médio", "Grande"].index(val_porte) if val_porte in ["Pequeno", "Médio", "Grande"] else 0
+
+            val_obito = transacao_selecionada.get("obito")
+            is_obito_val = (val_obito is True or str(val_obito).lower() in ["true", "sim", "1"])
+            idx_obito = 1 if is_obito_val else 0
+
+            with st.form(key=f"form_editar_transacao_{transacao_id}"):
+                col_e1, col_e2, col_e3 = st.columns([1, 1.2, 1.8])
+                with col_e1:
+                    edit_data = st.date_input(
+                        "Data da Castração *",
+                        value=dt_atual,
+                        format="DD/MM/YYYY",
+                        key=f"edit_dt_{transacao_id}"
+                    )
+                with col_e2:
+                    edit_cpf = st.text_input(
+                        "CPF do Beneficiário *",
+                        value=str(transacao_selecionada.get("cpf_beneficiario") or ""),
+                        key=f"edit_cpf_{transacao_id}"
+                    )
+                with col_e3:
+                    edit_nome = st.text_input(
+                        "Nome do Beneficiário *",
+                        value=str(transacao_selecionada.get("nome_beneficiario") or ""),
+                        key=f"edit_nome_{transacao_id}"
+                    )
+
+                col_e4, col_e5, col_e6, col_e7, col_e8 = st.columns([1, 1, 1, 1.2, 1])
+                with col_e4:
+                    edit_especie = st.selectbox(
+                        "Espécie *",
+                        options=["Canina", "Felina"],
+                        index=idx_esp,
+                        key=f"edit_esp_{transacao_id}"
+                    )
+                with col_e5:
+                    edit_sexo = st.radio(
+                        "Sexo *",
+                        options=["Macho", "Fêmea"],
+                        index=idx_sex,
+                        horizontal=True,
+                        key=f"edit_sex_{transacao_id}"
+                    )
+                with col_e6:
+                    edit_porte = st.selectbox(
+                        "Porte *",
+                        options=["Pequeno", "Médio", "Grande"],
+                        index=idx_porte,
+                        key=f"edit_porte_{transacao_id}"
+                    )
+                with col_e7:
+                    edit_microchip = st.text_input(
+                        "Nº do Microchip *",
+                        value=str(transacao_selecionada.get("numero_microchip") or ""),
+                        key=f"edit_chip_{transacao_id}"
+                    )
+                with col_e8:
+                    edit_obito_opcao = st.radio(
+                        "Veio a Óbito? *",
+                        options=["Não", "Sim"],
+                        index=idx_obito,
+                        horizontal=True,
+                        key=f"edit_obito_{transacao_id}"
+                    )
+
+                col_e9, col_e10 = st.columns([1, 1])
+                with col_e9:
+                    edit_valor = st.number_input(
+                        "Valor do Procedimento (R$) *",
+                        min_value=0.0,
+                        value=float(transacao_selecionada.get("valor_transacao") or 0.0),
+                        step=10.0,
+                        format="%.2f",
+                        key=f"edit_val_{transacao_id}"
+                    )
+                with col_e10:
+                    edit_nfe = st.text_input(
+                        "NF-e / Nota Fiscal *",
+                        value=str(transacao_selecionada.get("nfe_referencia") or ""),
+                        key=f"edit_nfe_{transacao_id}"
+                    )
+
+                submit_edit = st.form_submit_button("Salvar Alterações do Atendimento", width="stretch", type="primary")
+
+                if submit_edit:
+                    erros_edit = []
+                    if not edit_cpf.strip():
+                        erros_edit.append("CPF do Beneficiário")
+                    if not edit_nome.strip():
+                        erros_edit.append("Nome do Beneficiário")
+                    if not edit_microchip.strip():
+                        erros_edit.append("Número do Microchip")
+                    if edit_valor <= 0:
+                        erros_edit.append("Valor do Procedimento")
+                    if not edit_nfe.strip():
+                        erros_edit.append("NF-e / Nota Fiscal")
+
+                    if erros_edit:
+                        st.error(f"Campos obrigatórios não preenchidos: {', '.join(erros_edit)}.")
+                    else:
+                        if is_validacao_ativa(supabase):
+                            if not CPF().validate(edit_cpf.strip()):
+                                st.error("CPF do Beneficiário inválido. Verifique os dígitos informados.")
+                                st.stop()
+
+                        dados_editados = {
+                            "data_atendimento": edit_data.isoformat(),
+                            "cpf_beneficiario": edit_cpf.strip(),
+                            "nome_beneficiario": edit_nome.strip(),
+                            "especie": edit_especie,
+                            "sexo": edit_sexo,
+                            "porte": edit_porte,
+                            "numero_microchip": edit_microchip.strip(),
+                            "obito": (edit_obito_opcao == "Sim"),
+                            "valor_transacao": float(edit_valor),
+                            "nfe_referencia": edit_nfe.strip(),
+                        }
+
+                        with st.spinner("Salvando alterações..."):
+                            try:
+                                try:
+                                    supabase.table("relacao_transacoes").update(dados_editados).eq("id", transacao_id).execute()
+                                except Exception as ex_up_item:
+                                    err_s = str(ex_up_item)
+                                    if "PGRST204" in err_s or "Could not find" in err_s or "obito" in err_s:
+                                        payload_seguro = {k: v for k, v in dados_editados.items() if k != "obito"}
+                                        supabase.table("relacao_transacoes").update(payload_seguro).eq("id", transacao_id).execute()
+                                    else:
+                                        raise ex_up_item
+
+                                registrar_log_auditoria(
+                                    supabase, cnpj, nome_clinica,
+                                    tipo_entidade="atendimento",
+                                    acao="alteracao",
+                                    descricao=f"Atendimento ID {str(transacao_id)[:8]} alterado (Tutor: {edit_nome.strip()}, Microchip: {edit_microchip.strip()}, Espécie: {edit_especie}, Valor: R$ {float(edit_valor):.2f})",
+                                    referencia_id=transacao_id,
+                                    detalhes=dados_editados
+                                )
+                                st.success("Atendimento alterado com sucesso.")
+                                st.rerun()
+                            except Exception as ex_edit:
+                                st.error(f"Erro ao atualizar atendimento: {str(ex_edit)}")
+
+        with tab_excluir_item:
+            item_excluir_label = st.selectbox(
+                "Selecione o registro para exclusão definitiva:",
+                options=labels_transacoes,
+                key=f"sel_exc_{mes_codigo}"
+            )
+            if st.button("Excluir Atendimento Selecionado", key=f"btn_exc_{mes_codigo}", width="stretch", type="secondary"):
+                id_para_excluir = dict_transacoes[item_excluir_label]["id"]
                 try:
                     supabase.table("relacao_transacoes").delete().eq("id", id_para_excluir).execute()
+                    registrar_log_auditoria(
+                        supabase, cnpj, nome_clinica,
+                        tipo_entidade="atendimento",
+                        acao="exclusao",
+                        descricao=f"Atendimento ID {str(id_para_excluir)[:8]} ({dict_transacoes[item_excluir_label].get('nome_beneficiario', '')}) excluído do período {mes_codigo}",
+                        referencia_id=id_para_excluir
+                    )
                     st.success("Registro excluído com sucesso.")
                     st.rerun()
                 except Exception as ex:
@@ -290,6 +540,34 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
     def_telefone = str(user_meta.get("telefone_clinica") or "")
     def_nome_rep = str(user_meta.get("nome_representante") or "")
     def_cpf_rep = str(user_meta.get("cpf_representante") or "")
+
+    # Análise automática de óbitos para pré-preenchimento do relato
+    transacoes_com_obito = [
+        t for t in transacoes_abertas
+        if t.get("obito") is True or str(t.get("obito", "")).lower() in ["true", "sim", "1"]
+    ]
+
+    if transacoes_com_obito:
+        linhas_obito = []
+        for t in transacoes_com_obito:
+            esp = t.get("especie", "Animal")
+            sex = t.get("sexo", "")
+            chip = t.get("numero_microchip", "Não informado")
+            tutor = t.get("nome_beneficiario", "Não informado")
+            dt_raw = str(t.get("data_atendimento", ""))
+            try:
+                dt_fmt = pd.to_datetime(dt_raw).strftime("%d/%m/%Y")
+            except Exception:
+                dt_fmt = dt_raw[:10]
+            linhas_obito.append(f"- O animal ({esp}, {sex}, Microchip nº {chip}), tutor(a) {tutor}, atendido em {dt_fmt}, veio a óbito.")
+
+        texto_padrao_obitos = (
+            "Registros de óbito identificados nos atendimentos deste lote:\n"
+            + "\n".join(linhas_obito)
+            + "\n\nObservações clínicas e intercorrências adicionais:"
+        )
+    else:
+        texto_padrao_obitos = "Sem óbitos ou intercorrências cirúrgicas registradas no período."
 
     with st.form(key=f"form_lote_{mes_codigo}"):
         col_c1, col_c2 = st.columns(2)
@@ -330,7 +608,9 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
         st.markdown("##### Relato de Ocorrências")
         obitos_relato = st.text_area(
             "Óbitos e Intercorrências Cirúrgicas:",
-            placeholder="Descreva eventuais intercorrências ou informe 'Sem intercorrências no período'."
+            value=texto_padrao_obitos,
+            placeholder="Descreva eventuais intercorrências ou confirme o relato...",
+            help="Preenchido automaticamente com base nos atendimentos com óbito marcado no lote. O campo permanece editável para você adicionar mais observações."
         )
 
         reclamacoes_relato = st.text_area(
@@ -403,6 +683,15 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
 
                         supabase.table("relacao_transacoes").update({"lote_id": lote_id}).in_("id", ids_transacoes).execute()
 
+                        registrar_log_auditoria(
+                            supabase, cnpj, nome_fantasia_form.strip() if nome_fantasia_form else nome_clinica,
+                            tipo_entidade="lote",
+                            acao="criacao",
+                            descricao=f"Prestação de contas ({mes_codigo}) enviada com {total_abertas} atendimentos no valor total de R$ {float(valor_total_aberto):.2f}",
+                            referencia_id=lote_id,
+                            detalhes=dados_lote
+                        )
+
                         st.success(f"Prestação de contas ({mes_codigo}) enviada com sucesso para a SEPAN (Lote ID: {lote_id[:8]}).")
                         st.rerun()
 
@@ -414,7 +703,7 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
 # ABA 3: Histórico de Lotes e Estorno para Saneamento
 # -----------------------------------------------------------------------------
 def _render_tab_historico(supabase: Client, cnpj: str):
-    """Consulta de lotes e estorno de lotes devolvidos para saneamento."""
+    """Consulta de lotes, solicitação de retificação e estorno para saneamento."""
     st.markdown("#### Histórico de Lotes Enviados")
 
     try:
@@ -441,6 +730,9 @@ def _render_tab_historico(supabase: Client, cnpj: str):
         total_proc = lote.get("total_procedimentos", 0)
         valor_tot = float(lote.get("valor_total", 0.0))
         data_envio = str(lote.get("created_at", ""))[:10]
+        status_retificacao = lote.get("status_retificacao")
+        motivo_retificacao = lote.get("motivo_retificacao")
+        motivo_recusa = lote.get("motivo_recusa_retificacao")
 
         with st.container(border=True):
             col_h1, col_h2, col_h3, col_h4 = st.columns([1.5, 1.2, 1, 1.3])
@@ -498,31 +790,513 @@ def _render_tab_historico(supabase: Client, cnpj: str):
                 else:
                     st.caption("Sem transações vinculadas.")
 
+            # Parecer técnico da comissão SEPAN (se emitido e não substituído por status de retificação pendente)
             parecer = lote.get("parecer_comissao")
             apontamentos = lote.get("apontamentos_comissao")
-            if parecer or apontamentos:
+            if parecer and status not in ["Solicitação de Retificação Pendente", "Retificação Recusada pela SEPAN"]:
                 st.divider()
                 if status == "Apta com Necessidade de Saneamento":
-                    st.warning(f"**Parecer:** {parecer or status}\n\n**Apontamentos:** {apontamentos}")
+                    st.warning(f"**Parecer Técnico:** {parecer}\n\n**Apontamentos:** {apontamentos}")
+                elif status == "Aprovada":
+                    st.success(f"**Parecer Técnico:** {parecer}\n\n{apontamentos or 'Homologado sem ressalvas.'}")
+                elif status == "Aprovada com Ressalvas":
+                    st.info(f"**Parecer Técnico:** {parecer}\n\n**Observações:** {apontamentos}")
+                elif status == "Não Aprovada":
+                    st.error(f"**Parecer Técnico:** {parecer}\n\n**Motivação:** {apontamentos}")
 
-                    # Botão de Estorno para permitir correção e novo fechamento
-                    if st.button("Estornar Lote para Correção", key=f"estorno_{lote_id}", width="stretch", type="primary"):
-                        with st.spinner("Estornando lote..."):
+            # -----------------------------------------------------------------
+            # Fluxo de Retificação e Estorno do Lote
+            # -----------------------------------------------------------------
+            st.divider()
+
+            if status == "Retificado pela Clínica" or (not transacoes_do_lote and status not in ["Enviado para Análise", "Solicitação de Retificação Pendente"]):
+                st.info("Este lote foi retificado/estornado. Os procedimentos cirúrgicos retornaram para a aba de Fechamento de Lote Mensal para consolidação de uma nova prestação de contas.")
+            
+            elif status == "Solicitação de Retificação Pendente" or status_retificacao == "pendente":
+                st.info(
+                    f"**Solicitação de Retificação em Análise pela SEPAN**\n\n"
+                    f"**Justificativa apresentada:** {motivo_retificacao or 'Não especificada.'}\n\n"
+                    f"Aguardando a análise e deliberação dos servidores da SEPAN para liberação do lote."
+                )
+
+            elif status in ["Retificação Aprovada pela SEPAN", "Apta com Necessidade de Saneamento"] or status_retificacao == "aprovada":
+                st.success(
+                    "**Retificação Autorizada pela SEPAN**\n\n"
+                    "A comissão autorizou a retificação deste lote. Clique no botão abaixo para estornar os atendimentos, efetuar as correções necessárias na aba de Fechamento de Lote Mensal e reenviar a prestação de contas."
+                )
+                if st.button("Estornar Lote para Correção", key=f"estorno_{lote_id}", width="stretch", type="primary"):
+                    with st.spinner("Estornando lote para saneamento..."):
+                        try:
+                            # 1. Desvincula os atendimentos para que fiquem abertos novamente (lote_id = null)
+                            supabase.table("relacao_transacoes").update({"lote_id": None}).eq("lote_id", lote_id).execute()
+
+                            # 2. Atualiza o status do lote
+                            payload_estorno = {
+                                "status": "Retificado pela Clínica",
+                                "solicitacao_retificacao": False,
+                                "status_retificacao": "concluido",
+                                "parecer_bloqueado": False
+                            }
                             try:
-                                # 1. Desvincula os atendimentos para que fiquem abertos novamente (lote_id = null)
-                                supabase.table("relacao_transacoes").update({"lote_id": None}).eq("lote_id", lote_id).execute()
-
-                                # 2. Atualiza o status do lote
+                                supabase.table("lotes_prestacao").update(payload_estorno).eq("id", lote_id).execute()
+                            except Exception:
                                 supabase.table("lotes_prestacao").update({"status": "Retificado pela Clínica"}).eq("id", lote_id).execute()
 
-                                st.success("Lote estornado. Os atendimentos voltaram para a aba de Fechamento onde podem ser excluídos ou editados.")
-                                st.rerun()
-                            except Exception as ex:
-                                st.error(f"Erro ao estornar lote: {str(ex)}")
+                            registrar_log_auditoria(
+                                supabase, cnpj, lote.get("nome_clinica") or cnpj,
+                                tipo_entidade="lote",
+                                acao="estorno",
+                                descricao=f"Lote {mes_ref} estornado pela clínica para saneamento e correção de atendimentos",
+                                referencia_id=lote_id
+                            )
 
-                elif status == "Aprovada":
-                    st.success(f"**Parecer:** {parecer or status}\n\n{apontamentos or 'Homologado sem ressalvas.'}")
-                elif status == "Aprovada com Ressalvas":
-                    st.info(f"**Parecer:** {parecer or status}\n\n**Observações:** {apontamentos}")
-                else:
-                    st.error(f"**Parecer:** {parecer or status}\n\n**Motivação:** {apontamentos}")
+                            st.success("Lote estornado com sucesso. Os atendimentos já estão disponíveis na aba de Fechamento de Lote Mensal para correções.")
+                            st.rerun()
+                        except Exception as ex:
+                            st.error(f"Erro ao estornar lote: {str(ex)}")
+
+            elif status_retificacao == "recusada" or status == "Retificação Recusada pela SEPAN":
+                st.error(
+                    f"**Aviso: Solicitação de Retificação Recusada pela SEPAN**\n\n"
+                    f"A comissão da SEPAN analisou e recusou o pedido de retificação deste lote.\n\n"
+                    f"**Motivo da recusa informado pela SEPAN:** {motivo_recusa or 'Sem justificativa informada.'}"
+                )
+
+                # Permite à clínica submeter um novo pedido com esclarecimentos complementares
+                with st.expander("Solicitar Novo Pedido de Retificação"):
+                    st.caption("Caso possua novos esclarecimentos ou comprovações, formalize um novo pedido com a devida justificativa.")
+                    nova_justificativa = st.text_area(
+                        "Nova Justificativa da Retificação *",
+                        placeholder="Descreva detalhadamente a necessidade de retificação deste lote...",
+                        key=f"nova_just_{lote_id}"
+                    )
+                    if st.button("Enviar Novo Pedido de Retificação", key=f"btn_novo_retif_{lote_id}", type="secondary"):
+                        if not nova_justificativa.strip():
+                            st.error("Informe a justificativa para formalizar a retificação.")
+                        else:
+                            with st.spinner("Enviando solicitação à SEPAN..."):
+                                try:
+                                    payload_nova_retif = {
+                                        "status": "Solicitação de Retificação Pendente",
+                                        "solicitacao_retificacao": True,
+                                        "status_retificacao": "pendente",
+                                        "motivo_retificacao": nova_justificativa.strip(),
+                                        "data_solicitacao_retificacao": datetime.now().isoformat()
+                                    }
+                                    try:
+                                        supabase.table("lotes_prestacao").update(payload_nova_retif).eq("id", lote_id).execute()
+                                    except Exception:
+                                        supabase.table("lotes_prestacao").update({
+                                            "status": "Solicitação de Retificação Pendente",
+                                            "motivo_retificacao": nova_justificativa.strip()
+                                        }).eq("id", lote_id).execute()
+
+                                    st.success("Novo pedido de retificação enviado com sucesso aos servidores da SEPAN.")
+                                    st.rerun()
+                                except Exception as ex_nova:
+                                    st.error(f"Erro ao enviar pedido de retificação: {str(ex_nova)}")
+
+            else:
+                # Lote enviado para análise ou aprovado/rejeitado sem pedido ativo de retificação
+                with st.expander("Solicitar Retificação do Lote"):
+                    st.caption(
+                        "Caso necessite corrigir informações cadastrais, notas fiscais, microchips ou atendimentos deste lote já enviado, "
+                        "formalize o pedido de retificação para análise e autorização dos servidores da SEPAN."
+                    )
+                    justificativa_retif = st.text_area(
+                        "Justificativa / Motivo da Retificação *",
+                        placeholder="Descreva detalhadamente o motivo da solicitação de retificação (ex: correção de microchip, ajuste de NF-e, remoção de atendimento incorreto)...",
+                        key=f"just_retif_{lote_id}"
+                    )
+                    if st.button("Enviar Pedido de Retificação", key=f"btn_retif_{lote_id}", type="secondary"):
+                        if not justificativa_retif.strip():
+                            st.error("A justificativa é obrigatória para formalizar a solicitação de retificação.")
+                        else:
+                            with st.spinner("Enviando solicitação de retificação à SEPAN..."):
+                                try:
+                                    payload_req = {
+                                        "status": "Solicitação de Retificação Pendente",
+                                        "solicitacao_retificacao": True,
+                                        "status_retificacao": "pendente",
+                                        "motivo_retificacao": justificativa_retif.strip(),
+                                        "data_solicitacao_retificacao": datetime.now().isoformat()
+                                    }
+                                    try:
+                                        supabase.table("lotes_prestacao").update(payload_req).eq("id", lote_id).execute()
+                                    except Exception:
+                                        supabase.table("lotes_prestacao").update({
+                                            "status": "Solicitação de Retificação Pendente",
+                                            "motivo_retificacao": justificativa_retif.strip()
+                                        }).eq("id", lote_id).execute()
+
+                                    registrar_log_auditoria(
+                                        supabase, cnpj, lote.get("nome_clinica") or cnpj,
+                                        tipo_entidade="retificacao",
+                                        acao="solicitacao_retificacao",
+                                        descricao=f"Solicitação de retificação formalizada para o lote {mes_ref}. Justificativa: {justificativa_retif.strip()}",
+                                        referencia_id=lote_id
+                                    )
+
+                                    st.success("Pedido de retificação enviado com sucesso. Aguarde a deliberação dos servidores da SEPAN.")
+                                    st.rerun()
+                                except Exception as ex_req:
+                                    st.error(f"Erro ao enviar pedido de retificação: {str(ex_req)}")
+
+
+# -----------------------------------------------------------------------------
+# ABA 4: Auditoria e Consulta Geral de Atendimentos da Clínica
+# -----------------------------------------------------------------------------
+def fetch_transacoes_clinica(_supabase: Client, cnpj: str) -> pd.DataFrame:
+    """Busca todas as transações da clínica credenciada no Supabase."""
+    try:
+        response = (
+            _supabase.table("relacao_transacoes")
+            .select("*")
+            .eq("cnpj_clinica", cnpj)
+            .order("data_atendimento", desc=True)
+            .execute()
+        )
+        data = response.data or []
+        if not data:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data)
+        if "data_atendimento" in df.columns:
+            df["data_atendimento"] = pd.to_datetime(df["data_atendimento"], errors="coerce")
+        if "valor_transacao" in df.columns:
+            df["valor_transacao"] = pd.to_numeric(df["valor_transacao"], errors="coerce").fillna(0.0)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao consultar atendimentos da clínica: {str(e)}")
+        return pd.DataFrame()
+
+
+def _render_tab_auditoria_clinica(supabase: Client, cnpj: str, nome_clinica: str):
+    """Busca avançada e filtros estruturados em toda a base de atendimentos da clínica."""
+    st.markdown("#### Auditoria e Consulta de Atendimentos")
+    st.caption(f"Histórico e pesquisa avançada de todos os procedimentos cirúrgicos realizados por {nome_clinica}.")
+
+    with st.spinner("Carregando atendimentos..."):
+        df_raw = fetch_transacoes_clinica(supabase, cnpj)
+
+    if df_raw.empty:
+        st.info("Não foram encontrados atendimentos registrados para esta clínica.")
+        return
+
+    # --- Container de Filtros Estruturado ---
+    with st.expander("Filtros de Pesquisa", expanded=True):
+        # 1. Período, Status e Vínculo com Lote
+        st.markdown("##### Período, Status e Vínculo")
+        col_f1, col_f2, col_f3 = st.columns([1.4, 1, 1])
+
+        with col_f1:
+            min_date = df_raw["data_atendimento"].min().date() if not df_raw.empty and pd.notna(df_raw["data_atendimento"].min()) else date.today()
+            max_date = df_raw["data_atendimento"].max().date() if not df_raw.empty and pd.notna(df_raw["data_atendimento"].max()) else date.today()
+            periodo_selecionado = st.date_input(
+                "Período de Atendimento:",
+                value=(min_date, max_date),
+                format="DD/MM/YYYY",
+                key="clinica_auditoria_filtro_periodo"
+            )
+
+        with col_f2:
+            status_disp = ["pendente", "aprovado", "rejeitado"]
+            if "status_validacao" in df_raw.columns:
+                vals_status = [str(s).lower() for s in df_raw["status_validacao"].dropna().unique().tolist() if str(s).strip()]
+                status_disp = sorted(list(set(status_disp + vals_status)))
+
+            filtro_status = st.multiselect(
+                "Status de Validação:",
+                options=status_disp,
+                format_func=lambda s: str(s).capitalize(),
+                placeholder="Todos os status",
+                key="clinica_auditoria_filtro_status"
+            )
+
+        with col_f3:
+            filtro_vinculo_lote = st.selectbox(
+                "Vínculo com Lote:",
+                options=["Todos", "Vinculados a Lote", "Avulsos (Sem Lote)"],
+                index=0,
+                key="clinica_auditoria_filtro_vinculo"
+            )
+
+        st.divider()
+
+        # 2. Dados do Tutor / Beneficiário
+        st.markdown("##### Beneficiário")
+        col_t1, col_t2 = st.columns([1.5, 1])
+
+        with col_t1:
+            filtro_tutor_nome = st.text_input(
+                "Nome do Beneficiário:",
+                placeholder="Digite o nome completo ou parte...",
+                key="clinica_auditoria_filtro_tutor_nome"
+            )
+
+        with col_t2:
+            filtro_tutor_cpf = st.text_input(
+                "CPF do Beneficiário:",
+                placeholder="Digite o CPF com ou sem pontuação...",
+                key="clinica_auditoria_filtro_tutor_cpf"
+            )
+
+        st.divider()
+
+        # 3. Características do Animal
+        st.markdown("##### Animal")
+        col_a1, col_a2, col_a3, col_a4 = st.columns([1, 1, 1, 1.3])
+
+        with col_a1:
+            filtro_especie = st.multiselect(
+                "Espécie:",
+                options=["Canina", "Felina"],
+                placeholder="Todas as espécies",
+                key="clinica_auditoria_filtro_especie"
+            )
+
+        with col_a2:
+            filtro_sexo = st.multiselect(
+                "Sexo:",
+                options=["Macho", "Fêmea"],
+                placeholder="Todos os sexos",
+                key="clinica_auditoria_filtro_sexo"
+            )
+
+        with col_a3:
+            filtro_porte = st.multiselect(
+                "Porte:",
+                options=["Pequeno", "Médio", "Grande"],
+                placeholder="Todos os portes",
+                key="clinica_auditoria_filtro_porte"
+            )
+
+        with col_a4:
+            filtro_microchip = st.text_input(
+                "Nº do Microchip:",
+                placeholder="Digite o número do microchip...",
+                key="clinica_auditoria_filtro_microchip"
+            )
+
+        st.divider()
+
+        # 4. Documentos & Busca Livre
+        st.markdown("##### Documentação Fiscal e Busca Geral")
+        col_d1, col_d2, col_d3 = st.columns([1.2, 1.8, 1])
+
+        with col_d1:
+            filtro_nfe = st.text_input(
+                "NF-e / Nota Fiscal:",
+                placeholder="Digite o número da NF-e...",
+                key="clinica_auditoria_filtro_nfe"
+            )
+
+        with col_d2:
+            filtro_geral = st.text_input(
+                "Busca Geral:",
+                placeholder="Digite qualquer termo para buscar...",
+                key="clinica_auditoria_filtro_geral"
+            )
+
+        with col_d3:
+            st.write("")
+            st.write("")
+            if st.button("Limpar Filtros", width="stretch", type="secondary", key="clinica_auditoria_btn_limpar"):
+                for k in [
+                    "clinica_auditoria_filtro_status", "clinica_auditoria_filtro_vinculo",
+                    "clinica_auditoria_filtro_tutor_nome", "clinica_auditoria_filtro_tutor_cpf",
+                    "clinica_auditoria_filtro_especie", "clinica_auditoria_filtro_sexo",
+                    "clinica_auditoria_filtro_porte", "clinica_auditoria_filtro_microchip",
+                    "clinica_auditoria_filtro_nfe", "clinica_auditoria_filtro_geral",
+                    "clinica_auditoria_filtro_periodo"
+                ]:
+                    if k in st.session_state:
+                        del st.session_state[k]
+                st.rerun()
+
+    # --- Aplicação dos Filtros ---
+    df_filtered = df_raw.copy()
+
+    # 1. Filtro Período
+    if isinstance(periodo_selecionado, (tuple, list)) and len(periodo_selecionado) == 2:
+        dt_inicio, dt_fim = periodo_selecionado
+        df_filtered = df_filtered[
+            (df_filtered["data_atendimento"].dt.date >= dt_inicio) &
+            (df_filtered["data_atendimento"].dt.date <= dt_fim)
+        ]
+
+    # 2. Filtro Status de Validação
+    if filtro_status:
+        df_filtered = df_filtered[df_filtered["status_validacao"].astype(str).str.lower().isin(filtro_status)]
+
+    # 3. Filtro Vínculo Lote
+    if filtro_vinculo_lote == "Vinculados a Lote":
+        df_filtered = df_filtered[df_filtered["lote_id"].notna() & (df_filtered["lote_id"].astype(str) != "")]
+    elif filtro_vinculo_lote == "Avulsos (Sem Lote)":
+        df_filtered = df_filtered[df_filtered["lote_id"].isna() | (df_filtered["lote_id"].astype(str) == "")]
+
+    # 4. Filtro Tutor - Nome
+    if filtro_tutor_nome and filtro_tutor_nome.strip():
+        termo_nome = filtro_tutor_nome.strip().lower()
+        df_filtered = df_filtered[
+            df_filtered["nome_beneficiario"].astype(str).str.lower().str.contains(termo_nome, na=False)
+        ]
+
+    # 5. Filtro Tutor - CPF
+    if filtro_tutor_cpf and filtro_tutor_cpf.strip():
+        cpf_buscado_limpo = re.sub(r"[^\w\d]", "", filtro_tutor_cpf.strip())
+        if cpf_buscado_limpo:
+            df_filtered = df_filtered[
+                df_filtered["cpf_beneficiario"].astype(str).apply(
+                    lambda x: cpf_buscado_limpo in re.sub(r"[^\w\d]", "", str(x))
+                )
+            ]
+
+    # 6. Filtro Animal - Espécie
+    if filtro_especie:
+        especies_lower = [e.lower() for e in filtro_especie]
+        df_filtered = df_filtered[
+            df_filtered["especie"].astype(str).str.lower().isin(especies_lower)
+        ]
+
+    # 7. Filtro Animal - Sexo
+    if filtro_sexo:
+        sexos_lower = [s.lower() for s in filtro_sexo]
+        df_filtered = df_filtered[
+            df_filtered["sexo"].astype(str).str.lower().isin(sexos_lower)
+        ]
+
+    # 8. Filtro Animal - Porte
+    if filtro_porte:
+        portes_lower = [p.lower() for p in filtro_porte]
+        df_filtered = df_filtered[
+            df_filtered["porte"].astype(str).str.lower().isin(portes_lower)
+        ]
+
+    # 9. Filtro Animal - Microchip
+    if filtro_microchip and filtro_microchip.strip():
+        chip_termo = filtro_microchip.strip().lower()
+        df_filtered = df_filtered[
+            df_filtered["numero_microchip"].astype(str).str.lower().str.contains(chip_termo, na=False)
+        ]
+
+    # 10. Filtro NF-e
+    if filtro_nfe and filtro_nfe.strip():
+        nfe_termo = filtro_nfe.strip().lower()
+        df_filtered = df_filtered[
+            df_filtered["nfe_referencia"].astype(str).str.lower().str.contains(nfe_termo, na=False)
+        ]
+
+    # 11. Filtro Busca Geral
+    if filtro_geral and filtro_geral.strip():
+        termo_geral = filtro_geral.strip().lower()
+        termo_geral_limpo = re.sub(r"[^\w\d]", "", termo_geral)
+
+        def match_geral_clinica(row):
+            for col in ["cpf_beneficiario", "nome_beneficiario", "nfe_referencia", "numero_microchip", "especie", "porte", "sexo"]:
+                if col in row and pd.notna(row[col]):
+                    val_s = str(row[col]).lower()
+                    if termo_geral in val_s:
+                        return True
+                    if termo_geral_limpo and termo_geral_limpo in re.sub(r"[^\w\d]", "", val_s):
+                        return True
+            return False
+
+        df_filtered = df_filtered[df_filtered.apply(match_geral_clinica, axis=1)]
+
+    # --- KPIs de Atendimentos Filtrados ---
+    total_proc = len(df_filtered)
+    valor_tot = df_filtered["valor_transacao"].sum() if not df_filtered.empty else 0.0
+    total_caes = (df_filtered["especie"].astype(str).str.strip().str.capitalize() == "Canina").sum() if not df_filtered.empty else 0
+    total_gatos = (df_filtered["especie"].astype(str).str.strip().str.capitalize() == "Felina").sum() if not df_filtered.empty else 0
+    total_femeas = (df_filtered["sexo"].astype(str).str.strip().str.capitalize() == "Fêmea").sum() if not df_filtered.empty else 0
+    total_machos = (df_filtered["sexo"].astype(str).str.strip().str.capitalize() == "Macho").sum() if not df_filtered.empty else 0
+
+    col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5 = st.columns(5)
+    with col_kpi1:
+        st.metric("Total de Atendimentos", f"{total_proc:,}".replace(",", "."))
+    with col_kpi2:
+        st.metric("Valor Total (R$)", f"R$ {valor_tot:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    with col_kpi3:
+        st.metric("Cães Castrados", f"{total_caes:,}".replace(",", "."))
+    with col_kpi4:
+        st.metric("Gatos Castrados", f"{total_gatos:,}".replace(",", "."))
+    with col_kpi5:
+        st.metric("Fêmeas / Machos", f"{total_femeas} / {total_machos}")
+
+    st.divider()
+
+    col_subt, col_exp = st.columns([2.5, 1])
+    with col_subt:
+        st.markdown(f"#### Atendimentos Localizados ({total_proc})")
+
+    with col_exp:
+        if not df_filtered.empty:
+            csv_export = df_filtered.to_csv(index=False, sep=";", encoding="utf-8-sig")
+            st.download_button(
+                label="Exportar Relatório (CSV)",
+                data=csv_export,
+                file_name=f"relatorio_atendimentos_{cnpj.replace('.', '').replace('/', '').replace('-', '')}_{date.today().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                width="stretch",
+                type="primary",
+                key="btn_export_csv_clinica"
+            )
+
+    if df_filtered.empty:
+        st.warning("Nenhum atendimento atende aos filtros selecionados.")
+    else:
+        df_display = df_filtered.copy()
+        if "obito" in df_display.columns:
+            df_display["obito_view"] = df_display["obito"].apply(
+                lambda o: "Sim" if o is True or str(o).lower() in ["true", "sim", "1"] else "Não"
+            )
+            colunas_map = {
+                "data_atendimento": "Data",
+                "nome_beneficiario": "Tutor / Beneficiário",
+                "cpf_beneficiario": "CPF Tutor",
+                "especie": "Espécie",
+                "sexo": "Sexo",
+                "porte": "Porte",
+                "numero_microchip": "Microchip",
+                "obito_view": "Óbito",
+                "valor_transacao": "Valor (R$)",
+                "nfe_referencia": "NF-e",
+                "status_validacao": "Status",
+                "lote_id": "ID Lote"
+            }
+        else:
+            colunas_map = {
+                "data_atendimento": "Data",
+                "nome_beneficiario": "Tutor / Beneficiário",
+                "cpf_beneficiario": "CPF Tutor",
+                "especie": "Espécie",
+                "sexo": "Sexo",
+                "porte": "Porte",
+                "numero_microchip": "Microchip",
+                "valor_transacao": "Valor (R$)",
+                "nfe_referencia": "NF-e",
+                "status_validacao": "Status",
+                "lote_id": "ID Lote"
+            }
+        cols_to_show = [col for col in colunas_map.keys() if col in df_display.columns]
+        df_display = df_display[cols_to_show].copy()
+
+        if "data_atendimento" in df_display.columns:
+            df_display["data_atendimento"] = df_display["data_atendimento"].dt.strftime("%d/%m/%Y")
+        if "valor_transacao" in df_display.columns:
+            df_display["valor_transacao"] = df_display["valor_transacao"].apply(
+                lambda v: f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+        if "lote_id" in df_display.columns:
+            df_display["lote_id"] = df_display["lote_id"].apply(
+                lambda x: str(x)[:8] if pd.notna(x) and str(x).strip() else "Avulso"
+            )
+        if "status_validacao" in df_display.columns:
+            df_display["status_validacao"] = df_display["status_validacao"].apply(
+                lambda s: str(s).capitalize() if pd.notna(s) else "Pendente"
+            )
+
+        df_display = df_display.rename(columns=colunas_map)
+
+        st.dataframe(df_display, width="stretch", hide_index=True)
