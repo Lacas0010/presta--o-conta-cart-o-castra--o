@@ -159,12 +159,12 @@ def _render_tab_insercao(supabase: Client, cnpj: str, nome_clinica: str):
                     erros.append("NF-e / Nota Fiscal")
 
                 if erros:
-                    st.error(f"Campos obrigatórios não preenchidos: {', '.join(erros)}. Os demais dados preenchidos foram preservados.")
+                    st.error(f"Campos obrigatórios não preenchidos: {', '.join(erros)}. Os dados informados foram mantidos.")
                 else:
                     # Validação matemática de CPF se configurada no sistema
                     if is_validacao_ativa(supabase):
                         if not CPF().validate(cpf_beneficiario.strip()):
-                            st.error("⚠️ **CPF do Beneficiário inválido!** Verifique os dígitos informados. Os demais dados preenchidos foram preservados.")
+                            st.error("CPF do Beneficiário inválido. Verifique os dígitos informados. Os dados informados foram mantidos.")
                             return
 
                     veio_a_obito = (obito_opcao == "Sim")
@@ -525,7 +525,7 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
                     else:
                         if is_validacao_ativa(supabase):
                             if not CPF().validate(edit_cpf.strip()):
-                                st.error("⚠️ **CPF do Beneficiário inválido!** Verifique os dígitos informados. As alterações foram mantidas.")
+                                st.error("CPF do Beneficiário inválido. Verifique os dígitos informados. As alterações foram mantidas.")
                                 return
 
                         dados_editados = {
@@ -608,8 +608,8 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
 
     if transacoes_com_obito:
         st.warning(
-            f"Atenção: Foram identificados {len(transacoes_com_obito)} registro(s) de óbito nos atendimentos deste período. "
-            "O campo de 'Óbitos e Intercorrências Cirúrgicas' abaixo foi pré-preenchido automaticamente com esses dados para sua revisão."
+            f"Foram identificados {len(transacoes_com_obito)} registro(s) de óbito nos atendimentos deste período. "
+            "O campo de 'Óbitos e Intercorrências Cirúrgicas' abaixo foi preenchido automaticamente com esses dados para conferência."
         )
         linhas_obito = []
         for t in transacoes_com_obito:
@@ -673,7 +673,7 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
             "Óbitos e Intercorrências Cirúrgicas:",
             value=texto_padrao_obitos,
             placeholder="Descreva eventuais intercorrências ou confirme o relato...",
-            help="Preenchido automaticamente com base nos atendimentos com óbito marcado no lote. O campo permanece editável para você adicionar mais observações."
+            help="Preenchido automaticamente com base nos atendimentos com óbito registrado. O campo permanece editável para inclusão de observações adicionais."
         )
 
         reclamacoes_relato = st.text_area(
@@ -699,7 +699,7 @@ def _render_tab_fechamento(supabase: Client, cnpj: str, nome_clinica: str, nome_
             else:
                 if is_validacao_ativa(supabase):
                     if not CPF().validate(cpf_representante.strip()):
-                        st.error("⚠️ **CPF do Representante Legal inválido!** Verifique os dígitos informados. Os dados preenchidos foram preservados.")
+                        st.error("CPF do Representante Legal inválido. Verifique os dígitos informados. Os dados preenchidos foram mantidos.")
                         return
 
                 with st.spinner("Enviando lote..."):
@@ -885,19 +885,19 @@ def _render_tab_historico(supabase: Client, cnpj: str):
             st.divider()
 
             if status == "Retificado pela Clínica" or (not transacoes_do_lote and status not in ["Enviado para Análise", "Solicitação de Retificação Pendente"]):
-                st.info("Este lote foi retificado/estornado. Os procedimentos cirúrgicos retornaram para a aba de Fechamento de Lote Mensal para consolidação de uma nova prestação de contas.")
+                st.info("Lote retificado. Os procedimentos cirúrgicos retornaram para a aba de Fechamento de Lote Mensal para consolidação de uma nova prestação de contas.")
             
             elif status == "Solicitação de Retificação Pendente" or status_retificacao == "pendente":
                 st.info(
                     f"**Solicitação de Retificação em Análise pela SEPAN**\n\n"
-                    f"**Justificativa apresentada:** {motivo_retificacao or 'Não especificada.'}\n\n"
-                    f"Aguardando a análise e deliberação dos servidores da SEPAN para liberação do lote."
+                    f"**Justificativa apresentada:** {motivo_retificacao or 'Não informada.'}\n\n"
+                    f"Aguardando análise e deliberação da comissão para liberação do lote."
                 )
 
             elif status in ["Retificação Aprovada pela SEPAN", "Apta com Necessidade de Saneamento"] or status_retificacao == "aprovada":
                 st.success(
                     "**Retificação Autorizada pela SEPAN**\n\n"
-                    "A comissão autorizou a retificação deste lote. Clique no botão abaixo para estornar os atendimentos, efetuar as correções necessárias na aba de Fechamento de Lote Mensal e reenviar a prestação de contas."
+                    "A comissão autorizou a retificação deste lote. Utilize o botão abaixo para estornar os atendimentos, efetuar as correções necessárias na aba de Fechamento de Lote Mensal e reenviar a prestação de contas."
                 )
                 if st.button("Estornar Lote para Correção", key=f"estorno_{lote_id}", width="stretch", type="primary"):
                     with st.spinner("Estornando lote para saneamento..."):
@@ -932,14 +932,14 @@ def _render_tab_historico(supabase: Client, cnpj: str):
 
             elif status_retificacao == "recusada" or status == "Retificação Recusada pela SEPAN":
                 st.error(
-                    f"**Aviso: Solicitação de Retificação Recusada pela SEPAN**\n\n"
-                    f"A comissão da SEPAN analisou e recusou o pedido de retificação deste lote.\n\n"
-                    f"**Motivo da recusa informado pela SEPAN:** {motivo_recusa or 'Sem justificativa informada.'}"
+                    f"**Solicitação de Retificação Recusada pela SEPAN**\n\n"
+                    f"A comissão da SEPAN indeferiu o pedido de retificação deste lote.\n\n"
+                    f"**Motivo da recusa:** {motivo_recusa or 'Sem justificativa informada.'}"
                 )
 
                 # Permite à clínica submeter um novo pedido com esclarecimentos complementares
                 with st.expander("Solicitar Novo Pedido de Retificação"):
-                    st.caption("Caso possua novos esclarecimentos ou comprovações, formalize um novo pedido com a devida justificativa.")
+                    st.caption("Caso possua esclarecimentos complementares, formalize um novo pedido com a devida justificativa.")
                     nova_justificativa = st.text_area(
                         "Nova Justificativa da Retificação *",
                         placeholder="Descreva detalhadamente a necessidade de retificação deste lote...",
@@ -966,7 +966,7 @@ def _render_tab_historico(supabase: Client, cnpj: str):
                                             "motivo_retificacao": nova_justificativa.strip()
                                         }).eq("id", lote_id).execute()
 
-                                    st.success("Novo pedido de retificação enviado com sucesso aos servidores da SEPAN.")
+                                    st.success("Novo pedido de retificação enviado à SEPAN.")
                                     st.rerun()
                                 except Exception as ex_nova:
                                     st.error(f"Erro ao enviar pedido de retificação: {str(ex_nova)}")
@@ -976,7 +976,7 @@ def _render_tab_historico(supabase: Client, cnpj: str):
                 with st.expander("Solicitar Retificação do Lote"):
                     st.caption(
                         "Caso necessite corrigir informações cadastrais, notas fiscais, microchips ou atendimentos deste lote já enviado, "
-                        "formalize o pedido de retificação para análise e autorização dos servidores da SEPAN."
+                        "formalize o pedido de retificação para análise da comissão."
                     )
                     justificativa_retif = st.text_area(
                         "Justificativa / Motivo da Retificação *",
@@ -1012,7 +1012,7 @@ def _render_tab_historico(supabase: Client, cnpj: str):
                                         referencia_id=lote_id
                                     )
 
-                                    st.success("Pedido de retificação enviado com sucesso. Aguarde a deliberação dos servidores da SEPAN.")
+                                    st.success("Pedido de retificação enviado com sucesso. Aguarde a deliberação da SEPAN.")
                                     st.rerun()
                                 except Exception as ex_req:
                                     st.error(f"Erro ao enviar pedido de retificação: {str(ex_req)}")

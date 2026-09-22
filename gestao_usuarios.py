@@ -188,7 +188,7 @@ def main():
                         {"user_metadata": updated_metadata}
                     )
 
-                    st.success(f"O usuário {selected_email} foi atualizado para '{ROLE_OPTIONS[selected_role_key]}'.")
+                    st.success(f"Permissões do usuário {selected_email} atualizadas para '{ROLE_OPTIONS[selected_role_key]}'.")
                     st.rerun()
 
                 except Exception as ex:

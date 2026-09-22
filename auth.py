@@ -153,16 +153,16 @@ def _render_signup_tab(supabase: Client):
                 ]
                 faltantes = [nome for nome, val in campos_obrigatorios if not val.strip()]
                 if faltantes:
-                    st.error(f"Preencha todos os campos obrigatórios da clínica: {', '.join(faltantes)}. Os dados preenchidos foram preservados.")
+                    st.error(f"Campos obrigatórios não preenchidos: {', '.join(faltantes)}. Os dados informados foram mantidos.")
                     return
 
                 # Validação matemática rigorosa do CNPJ e CPF do representante se ativada nas configurações
                 if is_validacao_ativa(supabase):
                     if not CNPJ().validate(cnpj.strip()):
-                        st.error("⚠️ **CNPJ da clínica inválido!** Verifique os 14 dígitos informados. Os demais dados preenchidos foram preservados.")
+                        st.error("CNPJ da clínica inválido. Verifique os 14 dígitos informados. Os dados informados foram mantidos.")
                         return
                     if not CPF().validate(cpf_representante.strip()):
-                        st.error("⚠️ **CPF do Representante Legal inválido!** Verifique os 11 dígitos informados. Os demais dados preenchidos foram preservados.")
+                        st.error("CPF do Representante Legal inválido. Verifique os 11 dígitos informados. Os dados informados foram mantidos.")
                         return
 
                 nome_clinica_final = nome_fantasia.strip() if nome_fantasia.strip() else nome_empresarial.strip()
@@ -184,13 +184,13 @@ def _render_signup_tab(supabase: Client):
                 }
             else:
                 if not cpf.strip() or not nome_completo.strip():
-                    st.error("Preencha o CPF e o Nome Completo. Os dados preenchidos foram preservados.")
+                    st.error("Preencha o CPF e o Nome Completo. Os dados informados foram mantidos.")
                     return
 
                 # Validação matemática rigorosa do CPF se ativada nas configurações
                 if is_validacao_ativa(supabase):
                     if not CPF().validate(cpf.strip()):
-                        st.error("⚠️ **CPF do Servidor inválido!** Verifique os 11 dígitos informados. Os demais dados preenchidos foram preservados.")
+                        st.error("CPF do Servidor inválido. Verifique os 11 dígitos informados. Os dados informados foram mantidos.")
                         return
 
                 user_metadata = {

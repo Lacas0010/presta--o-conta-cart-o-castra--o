@@ -4,7 +4,7 @@
 
 ---
 
-## 📋 Visão Geral
+## Visão Geral
 
 O **Sistema de Fiscalização e Prestação de Contas do Programa Cartão Castração** é uma plataforma institucional de gestão e conformidade pública desenvolvida em Python e Streamlit, integrada ao Supabase (PostgreSQL, Autenticação e Row Level Security - RLS).
 
@@ -12,7 +12,7 @@ O sistema estrutura todo o ciclo de prestação de contas entre as **Clínicas V
 
 ---
 
-## 🏛️ Estrutura e Módulos do Sistema
+## Estrutura e Módulos do Sistema
 
 ```
 ├── app.py                 # Ponto de entrada, injeção de Design System (Light/Dark) e roteamento de perfis
@@ -31,7 +31,7 @@ O sistema estrutura todo o ciclo de prestação de contas entre as **Clínicas V
 
 ---
 
-## 👥 Perfis de Acesso (*Roles*)
+## Perfis de Acesso (*Roles*)
 
 | Perfil | Identificador | Descrição das Permissões |
 | :--- | :--- | :--- |
@@ -42,9 +42,9 @@ O sistema estrutura todo o ciclo de prestação de contas entre as **Clínicas V
 
 ---
 
-## 🌟 Principais Funcionalidades
+## Principais Funcionalidades
 
-### 🏥 1. Portal da Clínica Credenciada
+### 1. Portal da Clínica Credenciada
 - **Registro Individual de Atendimentos**: Lançamento com separação visual em 3 blocos (Tutor, Animal e NF-e), validação matemática opcional de CPF e registro de intercorrência cirúrgica / óbito (`Sim` / `Não`).
 - **Fechamento de Lote Mensal**:
   - Guia operacional em 3 etapas e grid com 5 métricas consolidadas (Total, Cães, Gatos, Óbitos e Valor Total).
@@ -60,7 +60,7 @@ O sistema estrutura todo o ciclo de prestação de contas entre as **Clínicas V
 
 ---
 
-### 🛡️ 2. Painel da Comissão de Gestão (Servidores SEPAN)
+### 2. Painel da Comissão de Gestão (Servidores SEPAN)
 - **Dashboard de Topo**: Indicadores em tempo real (Lotes Pendentes, Homologados, Retificações Solicitadas e Valor em Análise).
 - **Fila de Fiscalização de Lotes**:
   - Seleção limpa com estado vazio orientativo (`index=None`).
@@ -79,13 +79,13 @@ O sistema estrutura todo o ciclo de prestação de contas entre as **Clínicas V
 
 ---
 
-### 🎨 3. Design System & Acessibilidade Visual
+### 3. Design System & Acessibilidade Visual
 - **Tipografia Moderna**: Fonte `Inter` (Google Fonts) em toda a aplicação.
 - **Suporte Total a Light Mode e Dark Mode**: Ajuste automático de contrastes, variáveis CSS dinâmicas, fundos adaptáveis e badges de status luminosos no tema escuro.
 
 ---
 
-## ⚙️ Pré-requisitos e Instalação
+## Pré-requisitos e Instalação
 
 ### 1. Clonar o Repositório e Criar o Ambiente Virtual
 
@@ -122,7 +122,7 @@ Acesse o **SQL Editor** no painel do Supabase e execute o conteúdo do arquivo [
 
 ---
 
-## 🚀 Execução da Aplicação
+## Execução da Aplicação
 
 Para iniciar o portal principal:
 
@@ -138,7 +138,7 @@ streamlit run gestao_usuarios.py
 
 ---
 
-## 🔒 Segurança e Conformidade Pública
+## Segurança e Conformidade Pública
 
 - **Row Level Security (RLS)** ativo em todas as tabelas do banco de dados.
 - **Trilha de Auditoria Imutável**: Gravação de eventos de criação, edição, exclusão, estorno, deliberação de retificação e homologação de pareceres.

@@ -449,7 +449,7 @@ def _render_tab_lotes(supabase: Client):
         with st.container(border=True):
             st.warning(
                 f"**A clínica credenciada formalizou um pedido de retificação para este lote.**\n\n"
-                f"**Justificativa apresentada:** {motivo_retificacao or 'Não especificada.'}"
+                f"**Justificativa apresentada:** {motivo_retificacao or 'Não informada.'}"
             )
             if data_solicitacao_retificacao:
                 st.caption(f"Data do pedido: {str(data_solicitacao_retificacao)[:19].replace('T', ' ')}")
@@ -457,7 +457,7 @@ def _render_tab_lotes(supabase: Client):
             col_dec_ret1, col_dec_ret2 = st.columns(2)
             with col_dec_ret1:
                 st.markdown("**1. Autorizar Retificação:**")
-                st.caption("Libera o lote para que a clínica faça o estorno dos atendimentos, execute correções e reenvie a prestação.")
+                st.caption("Libera o lote para estorno dos atendimentos, correções e reenvio pela clínica.")
                 if st.button("Aceitar Retificação do Lote", key=f"btn_aceitar_retif_{lote_id}", type="primary", width="stretch"):
                     with st.spinner("Registrando aceite da retificação..."):
                         try:
@@ -490,7 +490,7 @@ def _render_tab_lotes(supabase: Client):
                                 descricao=f"Pedido de retificação do lote {mes_ref} da clínica {nome_clinica} APROVADO pela comissão SEPAN",
                                 referencia_id=lote_id
                             )
-                            st.success("Retificação autorizada com sucesso. O lote foi liberado para a clínica.")
+                            st.success("Retificação autorizada. Lote liberado para correções pela clínica.")
                             st.cache_data.clear()
                             st.rerun()
                         except Exception as ex_aceite:
@@ -498,7 +498,7 @@ def _render_tab_lotes(supabase: Client):
 
             with col_dec_ret2:
                 st.markdown("**2. Recusar Retificação:**")
-                st.caption("Nega o pedido e exibe um aviso formal no painel da clínica com a fundamentação da recusa.")
+                st.caption("Indefere o pedido e registra a fundamentação da recusa no painel da clínica.")
                 with st.popover("Recusar Retificação", use_container_width=True):
                     motivo_recusa_input = st.text_area(
                         "Motivo da Recusa *",
@@ -538,7 +538,7 @@ def _render_tab_lotes(supabase: Client):
                                         descricao=f"Pedido de retificação do lote {mes_ref} da clínica {nome_clinica} RECUSADO pela comissão SEPAN. Motivo: {motivo_recusa_input.strip()}",
                                         referencia_id=lote_id
                                     )
-                                    st.warning("Solicitação de retificação recusada com sucesso.")
+                                    st.info("Solicitação de retificação indeferida.")
                                     st.cache_data.clear()
                                     st.rerun()
                                 except Exception as ex_recusa:
@@ -555,7 +555,7 @@ def _render_tab_lotes(supabase: Client):
         st.error(
             f"**Retificação Recusada pela SEPAN**\n\n"
             f"O pedido de retificação deste lote foi recusado por `{analisado_retificacao_por or 'Comissão'}`.\n\n"
-            f"**Motivo registrado:** {motivo_recusa_retificacao or 'Não especificado.'}"
+            f"**Motivo registrado:** {motivo_recusa_retificacao or 'Não informado.'}"
         )
 
     st.markdown("#### Parecer da Comissão de Gestão")

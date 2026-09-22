@@ -31,7 +31,7 @@ env.bak/
 venv.bak/
 
 # =============================================================================
-# Streamlit & Configurações Sensíveis
+# Streamlit & Credenciais Sensíveis
 # =============================================================================
 .streamlit/secrets.toml
 .streamlit/config.toml
@@ -40,16 +40,30 @@ venv.bak/
 *.env
 
 # =============================================================================
-# Arquivos Temporários, Relatórios Exportados e Logs
+# Testes, Playwright & Automação
+# =============================================================================
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# =============================================================================
+# Arquivos Temporários, Relatórios, Manuais e Exportações
 # =============================================================================
 *.pdf
 *.csv
 *.xlsx
 *.log
-scratch/
+*.tmp
 temp/
 tmp/
-*.tmp
+scratch/
+docs/
+
+# Manuais e scripts geradores de documentação
+MANUAL_DO_USUARIO.md
+MANUAL_DO_USUARIO_SEPAN.pdf
+gerar_manual_pdf.py
 
 # =============================================================================
 # IDEs, Editores e Agentes de IA
