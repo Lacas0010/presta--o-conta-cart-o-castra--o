@@ -59,10 +59,9 @@ tmp/
 scratch/
 docs/
 
-# Manuais e scripts geradores de documentação
+# Manuais e documentação gerada
 MANUAL_DO_USUARIO.md
 MANUAL_DO_USUARIO_SEPAN.pdf
-gerar_manual_pdf.py
 
 # =============================================================================
 # IDEs, Editores e Agentes de IA

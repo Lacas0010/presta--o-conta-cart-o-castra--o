@@ -25,9 +25,9 @@ class PDFBaseSEPAN(FPDF):
     def header(self):
         self.set_font("Helvetica", "B", 8.5)
         self.set_text_color(50, 50, 50)
-        self.cell(0, 4, "GOVERNO DO DISTRITO FEDERAL - SECRETARIA EXTRAORDINÁRIA DE PROTEÇÃO ANIMAL - SEPAN", ln=True, align="C")
+        self.cell(0, 4, "GOVERNO DO DISTRITO FEDERAL - SECRETARIA EXTRAORDINÁRIA DE PROTEÇÃO ANIMAL - SEPAN", new_x="LMARGIN", new_y="NEXT", align="C")
         self.set_font("Helvetica", "", 8)
-        self.cell(0, 4, "PROGRAMA CARTÃO CASTRAÇÃO - FISCALIZAÇÃO E PRESTAÇÃO DE CONTAS", ln=True, align="C")
+        self.cell(0, 4, "PROGRAMA CARTÃO CASTRAÇÃO - FISCALIZAÇÃO E PRESTAÇÃO DE CONTAS", new_x="LMARGIN", new_y="NEXT", align="C")
         self.set_draw_color(180, 180, 180)
         self.line(10, 19, 200, 19)
         self.ln(5)
@@ -73,7 +73,7 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
     # Título Principal do Documento
     pdf.set_font("Helvetica", "B", 10.5)
     pdf.set_text_color(20, 20, 20)
-    pdf.cell(0, 6, "RELATÓRIO MENSAL DE PRESTAÇÃO DE CONTAS - CARTÃO CASTRAÇÃO", ln=True, align="C")
+    pdf.cell(0, 6, "RELATÓRIO MENSAL DE PRESTAÇÃO DE CONTAS - CARTÃO CASTRAÇÃO", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(3)
 
     # 1. Identificação da Empresa Credenciada
@@ -88,7 +88,7 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
 
     pdf.set_fill_color(240, 240, 240)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "1. IDENTIFICAÇÃO DA EMPRESA CREDENCIADA", ln=True, fill=True)
+    pdf.cell(0, 6, "1. IDENTIFICAÇÃO DA EMPRESA CREDENCIADA", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     pdf.set_font("Helvetica", "", 8.5)
@@ -107,23 +107,23 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
 
     for label, val in dados_clinica_anexo:
         pdf.cell(col_label_w, 5, f" {label}", border=1)
-        pdf.cell(col_val_w, 5, f" {val}", border=1, ln=True)
+        pdf.cell(col_val_w, 5, f" {val}", border=1, new_x="LMARGIN", new_y="NEXT")
 
     pdf.ln(3)
 
     # 2. Período de Referência
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "2. PERÍODO DE REFERÊNCIA DA PRESTAÇÃO DE CONTAS", ln=True, fill=True)
+    pdf.cell(0, 6, "2. PERÍODO DE REFERÊNCIA DA PRESTAÇÃO DE CONTAS", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     pdf.set_font("Helvetica", "", 8.5)
     pdf.cell(45, 5, "Mês / Ano de Competência:", border=1)
-    pdf.cell(145, 5, f" {mes_referencia}", border=1, ln=True)
+    pdf.cell(145, 5, f" {mes_referencia}", border=1, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
 
     # 3. Resumo Executivo
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "3. RESUMO EXECUTIVO - SERVIÇO DE CASTRAÇÃO (CARTÃO CASTRAÇÃO)", ln=True, fill=True)
+    pdf.cell(0, 6, "3. RESUMO EXECUTIVO - SERVIÇO DE CASTRAÇÃO (CARTÃO CASTRAÇÃO)", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     total_proc = len(lista_transacoes)
@@ -140,7 +140,7 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
     valor_total_soma = sum(float(t.get("valor_transacao", 0)) for t in lista_transacoes)
 
     pdf.set_font("Helvetica", "B", 8)
-    pdf.cell(0, 5, "3.1. Serviços de Castração e Microchipagem Realizados no Período:", ln=True)
+    pdf.cell(0, 5, "3.1. Serviços de Castração e Microchipagem Realizados no Período:", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 8)
     col_w1, col_w2 = 120, 70
@@ -160,7 +160,7 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
 
     for label, val in itens_sinteticos:
         pdf.cell(col_w1, 4.5, f"  {label}", border=1)
-        pdf.cell(col_w2, 4.5, f"  {val}", border=1, ln=True, align="R")
+        pdf.cell(col_w2, 4.5, f"  {val}", border=1, new_x="LMARGIN", new_y="NEXT", align="R")
 
     pdf.ln(2)
 
@@ -168,21 +168,21 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
     reclamacoes = dados_lote.get("reclamacoes_relato") or "Nenhuma reclamação registrada no período."
 
     pdf.set_font("Helvetica", "B", 8)
-    pdf.cell(0, 4.5, "3.2. Ocorrências e Relatos do Período:", ln=True)
-    pdf.cell(0, 4, "- Óbitos e Intercorrências Cirúrgicas:", ln=True)
+    pdf.cell(0, 4.5, "3.2. Ocorrências e Relatos do Período:", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 4, "- Óbitos e Intercorrências Cirúrgicas:", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 8)
     pdf.multi_cell(0, 4, f"  {obitos}")
     pdf.ln(1.5)
 
     pdf.set_font("Helvetica", "B", 8)
-    pdf.cell(0, 4, "- Reclamações de Beneficiários:", ln=True)
+    pdf.cell(0, 4, "- Reclamações de Beneficiários:", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 8)
     pdf.multi_cell(0, 4, f"  {reclamacoes}")
     pdf.ln(3)
 
     # 4. Relação Detalhada de Transações (Com Coluna Porte)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "4. RESUMO EXECUTIVO - RELAÇÃO DETALHADA DE TRANSAÇÕES", ln=True, fill=True)
+    pdf.cell(0, 6, "4. RESUMO EXECUTIVO - RELAÇÃO DETALHADA DE TRANSAÇÕES", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     # Larguras totais: 6+16+23+38+13+12+14+26+18+24 = 190 mm (A4 210mm - 2x10mm)
@@ -210,7 +210,7 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
     pdf.cell(col_widths["porte"], 6, "Porte", border=1, align="C", fill=True)
     pdf.cell(col_widths["micro"], 6, "Microchip", border=1, align="C", fill=True)
     pdf.cell(col_widths["val"], 6, "Valor (R$)", border=1, align="R", fill=True)
-    pdf.cell(col_widths["nfe"], 6, "NF-e", border=1, align="C", fill=True, ln=True)
+    pdf.cell(col_widths["nfe"], 6, "NF-e", border=1, align="C", fill=True, new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_font("Helvetica", "", 7)
     for idx, t in enumerate(lista_transacoes, 1):
@@ -239,13 +239,13 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
         pdf.cell(col_widths["porte"], 5, porte_val, border=1, align="C")
         pdf.cell(col_widths["micro"], 5, micro_val, border=1, align="C")
         pdf.cell(col_widths["val"], 5, val_str, border=1, align="R")
-        pdf.cell(col_widths["nfe"], 5, nfe_val, border=1, align="C", ln=True)
+        pdf.cell(col_widths["nfe"], 5, nfe_val, border=1, align="C", new_x="LMARGIN", new_y="NEXT")
 
     pdf.ln(3)
 
     # 5. Documentação Anexa
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "5. DOCUMENTAÇÃO ANEXA", ln=True, fill=True)
+    pdf.cell(0, 6, "5. DOCUMENTAÇÃO ANEXA", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
     pdf.set_font("Helvetica", "", 8)
     checklist_docs = [
@@ -255,12 +255,12 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
         "[   ] Documentação complementar solicitada pela SEPAN.",
     ]
     for doc in checklist_docs:
-        pdf.cell(0, 4.5, f"  {doc}", ln=True)
+        pdf.cell(0, 4.5, f"  {doc}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
 
     # 6. Declaração de Responsabilidade
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "6. DECLARAÇÃO DE RESPONSABILIDADE", ln=True, fill=True)
+    pdf.cell(0, 6, "6. DECLARAÇÃO DE RESPONSABILIDADE", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     nome_representante = dados_lote.get("nome_representante") or "Representante Legal"
@@ -289,15 +289,15 @@ def gerar_pdf_anexo_v(dados_lote: dict, lista_transacoes: list[dict]) -> bytes:
     data_extenso = f"Brasília/DF, {hoje.day:02d} de {meses_pt[hoje.month]} de {hoje.year}."
 
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 5, data_extenso, ln=True, align="R")
+    pdf.cell(0, 5, data_extenso, new_x="LMARGIN", new_y="NEXT", align="R")
     pdf.ln(10)
 
-    pdf.cell(0, 4, "_" * 65, ln=True, align="C")
+    pdf.cell(0, 4, "_" * 65, new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.set_font("Helvetica", "B", 8.5)
-    pdf.cell(0, 4, f"{nome_representante}", ln=True, align="C")
+    pdf.cell(0, 4, f"{nome_representante}", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.set_font("Helvetica", "", 8)
-    pdf.cell(0, 4, f"CPF: {cpf_representante} - Representante Legal", ln=True, align="C")
-    pdf.cell(0, 4, f"{nome_empresarial} (CNPJ: {cnpj_empresa})", ln=True, align="C")
+    pdf.cell(0, 4, f"CPF: {cpf_representante} - Representante Legal", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.cell(0, 4, f"{nome_empresarial} (CNPJ: {cnpj_empresa})", new_x="LMARGIN", new_y="NEXT", align="C")
 
     return bytes(pdf.output())
 
@@ -323,13 +323,13 @@ def gerar_pdf_parecer_sepan(
     # Título Principal do Parecer
     pdf.set_text_color(20, 20, 20)
     pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 5, "RELATÓRIO DE PRESTAÇÃO DE CONTAS E FISCALIZAÇÃO - CARTÃO CASTRAÇÃO", ln=True, align="C")
+    pdf.cell(0, 5, "RELATÓRIO DE PRESTAÇÃO DE CONTAS E FISCALIZAÇÃO - CARTÃO CASTRAÇÃO", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(4)
 
     # 1. IDENTIFICAÇÃO
     pdf.set_fill_color(240, 240, 240)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "1- IDENTIFICAÇÃO", ln=True, fill=True)
+    pdf.cell(0, 6, "1- IDENTIFICAÇÃO", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     proc_sei_val = processo_sei.strip() if processo_sei and processo_sei.strip() else "Não informado"
@@ -352,13 +352,13 @@ def gerar_pdf_parecer_sepan(
 
     for label, val in dados_identificacao:
         pdf.cell(65, 5, f" {label}", border=1)
-        pdf.cell(125, 5, f" {val}", border=1, ln=True)
+        pdf.cell(125, 5, f" {val}", border=1, new_x="LMARGIN", new_y="NEXT")
 
     pdf.ln(3)
 
     # 2. INTRODUÇÃO
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "2- INTRODUÇÃO", ln=True, fill=True)
+    pdf.cell(0, 6, "2- INTRODUÇÃO", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     texto_intro = (
@@ -382,7 +382,7 @@ def gerar_pdf_parecer_sepan(
 
     # 3. RESUMO EXECUTIVO
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "3- RESUMO EXECUTIVO", ln=True, fill=True)
+    pdf.cell(0, 6, "3- RESUMO EXECUTIVO", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     total_proc = int(dados_lote.get("total_procedimentos", 0))
@@ -403,25 +403,25 @@ def gerar_pdf_parecer_sepan(
 
     pdf.set_font("Helvetica", "B", 8)
     pdf.cell(115, 5, " Indicador", border=1, fill=True)
-    pdf.cell(75, 5, " Quantidade / Valor", border=1, ln=True, fill=True, align="R")
+    pdf.cell(75, 5, " Quantidade / Valor", border=1, new_x="LMARGIN", new_y="NEXT", fill=True, align="R")
 
     pdf.set_font("Helvetica", "", 8)
     pdf.cell(115, 5, " Castrações realizadas no período", border=1)
-    pdf.cell(75, 5, f" {total_proc}", border=1, ln=True, align="R")
+    pdf.cell(75, 5, f" {total_proc}", border=1, new_x="LMARGIN", new_y="NEXT", align="R")
 
     pdf.cell(115, 5, " Valor total movimentado no período", border=1)
-    pdf.cell(75, 5, f" {val_tot_str}", border=1, ln=True, align="R")
+    pdf.cell(75, 5, f" {val_tot_str}", border=1, new_x="LMARGIN", new_y="NEXT", align="R")
 
     pdf.cell(115, 5, " Animais cadastrados no CRIA", border=1)
-    pdf.cell(75, 5, f" {qtd_cria_val}", border=1, ln=True, align="R")
+    pdf.cell(75, 5, f" {qtd_cria_val}", border=1, new_x="LMARGIN", new_y="NEXT", align="R")
 
     pdf.cell(115, 5, " Inconsistências Identificadas", border=1)
-    pdf.cell(75, 5, f" {possui_inconsistencias}", border=1, ln=True, align="R")
+    pdf.cell(75, 5, f" {possui_inconsistencias}", border=1, new_x="LMARGIN", new_y="NEXT", align="R")
     pdf.ln(3)
 
     # 4. MOVIMENTAÇÃO FINANCEIRA E TRANSAÇÕES
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "4- MOVIMENTAÇÃO FINANCEIRA E TRANSAÇÕES", ln=True, fill=True)
+    pdf.cell(0, 6, "4- MOVIMENTAÇÃO FINANCEIRA E TRANSAÇÕES", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     min_nfe, max_nfe = "Não informado", "Não informado"
@@ -453,7 +453,7 @@ def gerar_pdf_parecer_sepan(
 
     # 5. MONITORAMENTO DOS CADASTROS NO CRIA
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "5- MONITORAMENTO DOS CADASTROS NO CRIA", ln=True, fill=True)
+    pdf.cell(0, 6, "5- MONITORAMENTO DOS CADASTROS NO CRIA", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     if inconsistencias_texto and str(inconsistencias_texto).strip():
@@ -467,7 +467,7 @@ def gerar_pdf_parecer_sepan(
 
     # 6. PONTOS DE ATENÇÃO
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "6- PONTOS DE ATENÇÃO", ln=True, fill=True)
+    pdf.cell(0, 6, "6- PONTOS DE ATENÇÃO", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     notas_pendentes_val = dados_lote.get("notas_pendentes")
@@ -482,7 +482,7 @@ def gerar_pdf_parecer_sepan(
 
     # 7. NOTAS PENDENTES
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "7- NOTAS PENDENTES", ln=True, fill=True)
+    pdf.cell(0, 6, "7- NOTAS PENDENTES", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     if notas_pendentes_val and str(notas_pendentes_val).strip():
@@ -496,7 +496,7 @@ def gerar_pdf_parecer_sepan(
 
     # 8. ANÁLISE DE CONFORMIDADE
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "8- ANÁLISE DE CONFORMIDADE", ln=True, fill=True)
+    pdf.cell(0, 6, "8- ANÁLISE DE CONFORMIDADE", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     apontamentos_val = dados_lote.get("apontamentos_comissao")
@@ -511,7 +511,7 @@ def gerar_pdf_parecer_sepan(
 
     # 9. DETERMINAÇÕES E PROVIDÊNCIAS
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "9- DETERMINAÇÕES E PROVIDÊNCIAS", ln=True, fill=True)
+    pdf.cell(0, 6, "9- DETERMINAÇÕES E PROVIDÊNCIAS", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     providencias_val = dados_lote.get("providencias")
@@ -526,11 +526,11 @@ def gerar_pdf_parecer_sepan(
 
     # 10. PARECER FINAL
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 6, "10- PARECER FINAL", ln=True, fill=True)
+    pdf.cell(0, 6, "10- PARECER FINAL", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(1)
 
     pdf.set_font("Helvetica", "", 8.5)
-    pdf.cell(0, 4.5, "Após análise da documentação apresentada, esta Comissão manifesta-se pela seguinte decisão:", ln=True)
+    pdf.cell(0, 4.5, "Após análise da documentação apresentada, esta Comissão manifesta-se pela seguinte decisão:", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(1.5)
 
     parecer_atual = str(dados_lote.get("parecer_comissao") or dados_lote.get("status") or "").strip().upper()
@@ -545,13 +545,13 @@ def gerar_pdf_parecer_sepan(
     pdf.set_font("Helvetica", "B", 8)
     for label, is_checked in opcoes_parecer:
         box = "[ X ]" if is_checked else "[   ]"
-        pdf.cell(0, 4.5, f"  {box}  {label}", ln=True)
+        pdf.cell(0, 4.5, f"  {box}  {label}", new_x="LMARGIN", new_y="NEXT")
 
     pdf.ln(3)
 
     # Subtópico Explícito: Fundamentação
     pdf.set_font("Helvetica", "B", 8.5)
-    pdf.cell(0, 4.5, "Fundamentação:", ln=True)
+    pdf.cell(0, 4.5, "Fundamentação:", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 8)
 
     fundamentacao_sintese = (
@@ -568,14 +568,14 @@ def gerar_pdf_parecer_sepan(
     data_extenso = f"Brasília/DF, {hoje.day:02d} de {meses_pt[hoje.month]} de {hoje.year}."
 
     pdf.set_font("Helvetica", "", 8.5)
-    pdf.cell(0, 5, data_extenso, ln=True, align="R")
+    pdf.cell(0, 5, data_extenso, new_x="LMARGIN", new_y="NEXT", align="R")
     pdf.ln(10)
 
-    pdf.cell(0, 4, "_" * 65, ln=True, align="C")
+    pdf.cell(0, 4, "_" * 65, new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.set_font("Helvetica", "B", 8.5)
-    pdf.cell(0, 4, f"{membro_val}", ln=True, align="C")
+    pdf.cell(0, 4, f"{membro_val}", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.set_font("Helvetica", "", 8)
-    pdf.cell(0, 4, "Comissão de Gestão e Fiscalização de Contratos - SEPAN", ln=True, align="C")
+    pdf.cell(0, 4, "Comissão de Gestão e Fiscalização de Contratos - SEPAN", new_x="LMARGIN", new_y="NEXT", align="C")
 
     return bytes(pdf.output())
 
