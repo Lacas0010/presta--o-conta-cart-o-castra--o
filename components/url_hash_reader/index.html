@@ -22,9 +22,14 @@ function processHash() {
         var h = (p.location && p.location.hash) ? p.location.hash : "";
         if (h && (h.indexOf("access_token=") !== -1 || h.indexOf("error=") !== -1)) {
             sendToStreamlit("streamlit:setComponentValue", {value: h});
+            var cleanHash = h.substring(1);
+            var searchStr = p.location.search ? (p.location.search + '&' + cleanHash) : ('?' + cleanHash);
+            var targetUrl = p.location.pathname + searchStr;
+            console.log("[AUTH COMPONENT] Redirecionando hash para query param:", targetUrl);
+            p.location.replace(targetUrl);
         }
     } catch(e) {
-        console.error("Erro ao ler hash:", e);
+        console.error("Erro ao ler/redirecionar hash:", e);
     }
 }
 
