@@ -6,22 +6,32 @@
 </head>
 <body style="margin:0;padding:0;background:transparent;overflow:hidden;">
 <script>
+var hasSent = false;
+
 function sendToStreamlit(type, data) {
     var msg = Object.assign({isStreamlitMessage: true, type: type}, data || {});
     window.parent.postMessage(msg, "*");
 }
 
 function processHash() {
-    // 1. Informa ao Streamlit que está pronto para remover qualquer placeholder
     sendToStreamlit("streamlit:componentReady", {apiVersion: 1});
     sendToStreamlit("streamlit:setFrameHeight", {height: 0});
 
-    // 2. Lê o hash da janela principal (onde o Supabase colocou #access_token=...)
+    if (hasSent) {
+        return;
+    }
+
     try {
         var p = window.parent || window.top || window;
         var h = (p.location && p.location.hash) ? p.location.hash : "";
         if (h && (h.indexOf("access_token=") !== -1 || h.indexOf("error=") !== -1)) {
+            hasSent = true;
             console.log("[AUTH COMPONENT] Hash detectado e enviado para o Python:", h.substring(0, 30) + "...");
+            try {
+                if (p.history && p.history.replaceState) {
+                    p.history.replaceState(null, null, p.location.pathname + p.location.search);
+                }
+            } catch(e) {}
             sendToStreamlit("streamlit:setComponentValue", {value: h});
         }
     } catch(e) {
@@ -38,7 +48,6 @@ window.addEventListener("message", function(event) {
 document.addEventListener("DOMContentLoaded", processHash);
 processHash();
 setTimeout(processHash, 50);
-setTimeout(processHash, 150);
 </script>
 </body>
 </html>

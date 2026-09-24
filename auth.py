@@ -210,7 +210,7 @@ def _render_new_password_screen(supabase: Client):
                                 st.session_state.is_resetting_password = False
                                 st.session_state.recovery_user = None
                                 st.session_state.user = None
-                                st.success("Senha redefinida com sucesso. Prossiga com a autenticação regular.")
+                                st.session_state.auth_flash_success = "Senha redefinida com sucesso. Prossiga com a autenticação regular."
                                 st.rerun()
                             except Exception as ex:
                                 st.error(f"Não foi possível atualizar a senha: {str(ex)}")
@@ -240,6 +240,9 @@ def render_auth_page(supabase: Client):
             """,
             unsafe_allow_html=True,
         )
+
+        if st.session_state.get("auth_flash_success"):
+            st.success(st.session_state.pop("auth_flash_success"))
 
         with st.container(border=True):
             tab_login, tab_signup, tab_forgot = st.tabs(["Login", "Criar Conta", "Esqueci a Senha"])

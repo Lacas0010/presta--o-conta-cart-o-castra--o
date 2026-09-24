@@ -363,9 +363,6 @@ def inject_custom_css():
             margin-bottom: 8px !important;
         }
         </style>
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-             onload="try{if(window.location.hash&&(window.location.hash.indexOf('access_token=')!==-1||window.location.hash.indexOf('error=')!==-1)){var h=window.location.hash.substring(1);var s=window.location.search?(window.location.search+'&'+h):('?'+h);window.location.replace(window.location.pathname+s);}}catch(e){console.error(e);}"
-             style="display:none;width:0;height:0;position:absolute;" />
         """,
         unsafe_allow_html=True,
     )
