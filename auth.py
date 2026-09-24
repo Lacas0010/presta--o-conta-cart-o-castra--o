@@ -11,12 +11,8 @@ Jurídica (Clínicas) e Pessoa Física (Servidores).
 import os
 import urllib.parse
 import streamlit as st
-import streamlit.components.v1 as components
 from supabase import Client
 from validate_docbr import CPF, CNPJ
-
-_COMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "components", "url_hash_reader")
-_url_hash_reader = components.declare_component("url_hash_reader", path=_COMP_DIR)
 
 
 def is_validacao_ativa(supabase: Client) -> bool:
@@ -52,39 +48,6 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
         print("[AUTH DEBUG LOG] -> Sessão de redefinição ativa. Renderizando tela de nova senha.")
         _render_new_password_screen(supabase)
         return True
-
-    # 2. Executa a leitura do hash via componente invisível (captura #access_token=...)
-    hash_val = ""
-    try:
-        hash_val = _url_hash_reader(key="auth_url_hash_reader") or ""
-    except Exception as ex:
-        print(f"[AUTH DEBUG LOG] Leitor de hash: {ex}")
-
-    if hash_val and ("access_token=" in hash_val or "error=" in hash_val):
-        print(f"[AUTH DEBUG LOG] -> Hash capturado via leitor: {hash_val[:30]}...")
-        cleaned_hash = hash_val.lstrip("#")
-        parsed = urllib.parse.parse_qs(cleaned_hash)
-
-        err = parsed.get("error_description", [None])[0] or parsed.get("error", [None])[0]
-        if err:
-            st.error(f"Erro no link de recuperação do Supabase: {err}")
-            return False
-
-        acc_token = parsed.get("access_token", [None])[0]
-        ref_token = parsed.get("refresh_token", [""])[0]
-        if acc_token:
-            with st.spinner("Autenticando sessão institucional de recuperação..."):
-                try:
-                    res = supabase.auth.set_session(acc_token, ref_token)
-                    if res.user:
-                        print(f"[AUTH DEBUG LOG] -> Sessão autenticada com sucesso via hash para: {res.user.email}")
-                        st.session_state.is_resetting_password = True
-                        st.session_state.recovery_user = res.user
-                        st.rerun()
-                except Exception as ex:
-                    print(f"[AUTH DEBUG LOG] -> Falha no set_session do hash: {str(ex)}")
-                    st.error(f"Não foi possível autenticar o token de recuperação: {str(ex)}")
-                    return False
 
     query_params = st.query_params
 
