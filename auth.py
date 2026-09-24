@@ -37,7 +37,7 @@ def is_validacao_ativa(supabase: Client) -> bool:
 
 def get_app_redirect_url() -> str:
     """Retorna a URL base de redirecionamento da aplicação para recuperação."""
-    base_url = str(st.secrets.get("APP_URL", "http://localhost:8501")).rstrip("/")
+    base_url = str(st.secrets.get("APP_URL", "https://cartao-castracao.streamlit.app")).rstrip("/")
     return base_url
 
 
@@ -47,6 +47,9 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
     de senha do Supabase Auth e renderiza a tela dedicada para definição da nova senha.
     Retorna True se estiver em processo de redefinição, pausando a renderização normal.
     """
+    if "processed_recovery_tokens" not in st.session_state:
+        st.session_state.processed_recovery_tokens = set()
+
     # 1. Se já estiver no estado de redefinição ativo nesta sessão
     if st.session_state.get("is_resetting_password"):
         print("[AUTH DEBUG LOG] -> Sessão de redefinição ativa. Renderizando tela de nova senha.")
@@ -72,7 +75,8 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
 
         acc_token = parsed.get("access_token", [None])[0]
         ref_token = parsed.get("refresh_token", [""])[0]
-        if acc_token:
+        if acc_token and acc_token not in st.session_state.processed_recovery_tokens:
+            st.session_state.processed_recovery_tokens.add(acc_token)
             with st.spinner("Autenticando sessão institucional de recuperação..."):
                 try:
                     res = supabase.auth.set_session(acc_token, ref_token)
@@ -106,7 +110,8 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
 
     # 3. Código PKCE de recuperação oficial (?code=...)
     code = query_params.get("code")
-    if code:
+    if code and code not in st.session_state.processed_recovery_tokens:
+        st.session_state.processed_recovery_tokens.add(code)
         print(f"[AUTH DEBUG LOG] -> Código PKCE detectado: {code[:10]}...")
         with st.spinner("Validando link de recuperação institucional..."):
             try:
@@ -125,7 +130,8 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
 
     # 4. Token de Acesso (?access_token=...&refresh_token=...)
     access_token = query_params.get("access_token")
-    if access_token:
+    if access_token and access_token not in st.session_state.processed_recovery_tokens:
+        st.session_state.processed_recovery_tokens.add(access_token)
         print(f"[AUTH DEBUG LOG] -> Token de acesso detectado: {access_token[:15]}...")
         refresh_token = query_params.get("refresh_token") or ""
         with st.spinner("Validando token de recuperação institucional..."):
@@ -145,7 +151,8 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
 
     # 5. Token ou Token Hash (?token=... ou ?token_hash=...)
     token = query_params.get("token") or query_params.get("token_hash")
-    if token:
+    if token and token not in st.session_state.processed_recovery_tokens:
+        st.session_state.processed_recovery_tokens.add(token)
         print(f"[AUTH DEBUG LOG] -> Token/Token Hash detectado: {token[:15]}...")
         with st.spinner("Validando token de recuperação..."):
             try:
