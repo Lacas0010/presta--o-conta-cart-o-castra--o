@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+<body style="margin:0;padding:0;background:transparent;overflow:hidden;">
+<script>
+function sendToStreamlit(type, data) {
+    var msg = Object.assign({isStreamlitMessage: true, type: type}, data || {});
+    window.parent.postMessage(msg, "*");
+}
+
+function processHash() {
+    // 1. Informa ao Streamlit que está pronto para remover qualquer placeholder
+    sendToStreamlit("streamlit:componentReady", {apiVersion: 1});
+    sendToStreamlit("streamlit:setFrameHeight", {height: 0});
+
+    // 2. Lê o hash da janela principal (onde o Supabase colocou #access_token=...)
+    try {
+        var p = window.parent || window.top || window;
+        var h = (p.location && p.location.hash) ? p.location.hash : "";
+        if (h && (h.indexOf("access_token=") !== -1 || h.indexOf("error=") !== -1)) {
+            sendToStreamlit("streamlit:setComponentValue", {value: h});
+        }
+    } catch(e) {
+        console.error("Erro ao ler hash:", e);
+    }
+}
+
+window.addEventListener("message", function(event) {
+    if (event.data && event.data.type === "streamlit:render") {
+        processHash();
+    }
+});
+
+document.addEventListener("DOMContentLoaded", processHash);
+processHash();
+setTimeout(processHash, 50);
+setTimeout(processHash, 150);
+</script>
+</body>
+</html>
