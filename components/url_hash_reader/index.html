@@ -26,7 +26,6 @@ function processHash() {
         var h = (p.location && p.location.hash) ? p.location.hash : "";
         if (h && (h.indexOf("access_token=") !== -1 || h.indexOf("error=") !== -1)) {
             hasSent = true;
-            console.log("[AUTH COMPONENT] Hash detectado e enviado para o Python:", h.substring(0, 30) + "...");
             try {
                 if (p.history && p.history.replaceState) {
                     p.history.replaceState(null, null, p.location.pathname + p.location.search);
@@ -34,9 +33,7 @@ function processHash() {
             } catch(e) {}
             sendToStreamlit("streamlit:setComponentValue", {value: h});
         }
-    } catch(e) {
-        console.error("Erro ao ler hash da janela principal:", e);
-    }
+    } catch(e) {}
 }
 
 window.addEventListener("message", function(event) {

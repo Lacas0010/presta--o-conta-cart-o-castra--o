@@ -52,7 +52,6 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
 
     # 1. Se já estiver no estado de redefinição ativo nesta sessão
     if st.session_state.get("is_resetting_password"):
-        print("[AUTH DEBUG LOG] -> Sessão de redefinição ativa. Renderizando tela de nova senha.")
         _render_new_password_screen(supabase)
         return True
 
@@ -60,11 +59,10 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
     hash_val = None
     try:
         hash_val = _url_hash_reader(key="auth_url_hash_reader")
-    except Exception as ex:
-        print(f"[AUTH DEBUG LOG] Leitor de hash: {ex}")
+    except Exception:
+        pass
 
     if hash_val and isinstance(hash_val, str) and ("access_token=" in hash_val or "error=" in hash_val):
-        print(f"[AUTH DEBUG LOG] -> Hash capturado via leitor do navegador: {hash_val[:30]}...")
         cleaned_hash = hash_val.lstrip("#")
         parsed = urllib.parse.parse_qs(cleaned_hash)
 
@@ -81,90 +79,70 @@ def check_and_render_recovery_flow(supabase: Client) -> bool:
                 try:
                     res = supabase.auth.set_session(acc_token, ref_token)
                     if res.user:
-                        print(f"[AUTH DEBUG LOG] -> Sessão autenticada com sucesso via hash para: {res.user.email}")
                         st.session_state.is_resetting_password = True
                         st.session_state.recovery_user = res.user
                         st.rerun()
                 except Exception as ex:
-                    print(f"[AUTH DEBUG LOG] -> Falha no set_session do hash: {str(ex)}")
                     st.error(f"Não foi possível autenticar o token de recuperação: {str(ex)}")
                     return False
 
     query_params = st.query_params
 
-    # Log de diagnóstico no terminal do servidor
-    params_dict = dict(query_params)
-    print(f"\n[AUTH DEBUG LOG] =========================================")
-    print(f"[AUTH DEBUG LOG] Query Params recebidos no Streamlit: {params_dict}")
-    print(f"[AUTH DEBUG LOG] is_resetting_password: {st.session_state.get('is_resetting_password')}")
-    print(f"[AUTH DEBUG LOG] recovery_user: {st.session_state.get('recovery_user')}")
-    print(f"[AUTH DEBUG LOG] =========================================\n")
-
-    # 2. Tratamento de mensagens de erro emitidas pelo Supabase (ex: link expirado)
+    # 3. Tratamento de mensagens de erro emitidas pelo Supabase (ex: link expirado)
     error_msg = query_params.get("error_description") or query_params.get("error")
     if error_msg:
-        print(f"[AUTH DEBUG LOG] -> Erro identificado nos query params: {error_msg}")
         st.error(f"Erro no link de recuperação do Supabase: {error_msg}")
         st.query_params.clear()
         return False
 
-    # 3. Código PKCE de recuperação oficial (?code=...)
+    # 4. Código PKCE de recuperação oficial (?code=...)
     code = query_params.get("code")
     if code and code not in st.session_state.processed_recovery_tokens:
         st.session_state.processed_recovery_tokens.add(code)
-        print(f"[AUTH DEBUG LOG] -> Código PKCE detectado: {code[:10]}...")
         with st.spinner("Validando link de recuperação institucional..."):
             try:
                 res = supabase.auth.exchange_code_for_session({"auth_code": code})
                 if res.user:
-                    print(f"[AUTH DEBUG LOG] -> Sessão PKCE autenticada com sucesso para usuário: {res.user.email}")
                     st.session_state.is_resetting_password = True
                     st.session_state.recovery_user = res.user
                     st.query_params.clear()
                     st.rerun()
             except Exception as ex:
-                print(f"[AUTH DEBUG LOG] -> Falha no exchange_code_for_session: {str(ex)}")
                 st.error(f"O link de recuperação informado é inválido ou já expirou: {str(ex)}")
                 st.query_params.clear()
                 return False
 
-    # 4. Token de Acesso (?access_token=...&refresh_token=...)
+    # 5. Token de Acesso (?access_token=...&refresh_token=...)
     access_token = query_params.get("access_token")
     if access_token and access_token not in st.session_state.processed_recovery_tokens:
         st.session_state.processed_recovery_tokens.add(access_token)
-        print(f"[AUTH DEBUG LOG] -> Token de acesso detectado: {access_token[:15]}...")
         refresh_token = query_params.get("refresh_token") or ""
         with st.spinner("Validando token de recuperação institucional..."):
             try:
                 res = supabase.auth.set_session(access_token, refresh_token)
                 if res.user:
-                    print(f"[AUTH DEBUG LOG] -> Sessão set_session autenticada com sucesso para: {res.user.email}")
                     st.session_state.is_resetting_password = True
                     st.session_state.recovery_user = res.user
                     st.query_params.clear()
                     st.rerun()
             except Exception as ex:
-                print(f"[AUTH DEBUG LOG] -> Falha no set_session: {str(ex)}")
                 st.error(f"Não foi possível autenticar o token de recuperação: {str(ex)}")
                 st.query_params.clear()
                 return False
 
-    # 5. Token ou Token Hash (?token=... ou ?token_hash=...)
+    # 6. Token ou Token Hash (?token=... ou ?token_hash=...)
     token = query_params.get("token") or query_params.get("token_hash")
     if token and token not in st.session_state.processed_recovery_tokens:
         st.session_state.processed_recovery_tokens.add(token)
-        print(f"[AUTH DEBUG LOG] -> Token/Token Hash detectado: {token[:15]}...")
         with st.spinner("Validando token de recuperação..."):
             try:
                 res = supabase.auth.verify_otp({"token_hash": token, "type": "recovery"})
                 if res.user:
-                    print(f"[AUTH DEBUG LOG] -> Sessão verify_otp autenticada com sucesso para: {res.user.email}")
                     st.session_state.is_resetting_password = True
                     st.session_state.recovery_user = res.user
                     st.query_params.clear()
                     st.rerun()
             except Exception as ex:
-                print(f"[AUTH DEBUG LOG] -> Falha no verify_otp: {str(ex)}")
                 st.error(f"Não foi possível validar o token de recuperação: {str(ex)}")
                 st.query_params.clear()
                 return False
