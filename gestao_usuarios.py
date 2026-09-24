@@ -194,6 +194,80 @@ def main():
                 except Exception as ex:
                     st.error(f"Erro ao atualizar permissões: {str(ex)}")
 
+    st.divider()
+
+    st.markdown("#### Gestão e Redefinição de Senhas de Usuários")
+    st.caption("Ferramentas administrativas do Supabase Auth para redefinir credenciais ou disparar e-mail de recuperação.")
+
+    col_pwd_email, col_pwd_direct = st.columns(2)
+
+    with col_pwd_email:
+        with st.container(border=True):
+            st.markdown("##### Envio de E-mail de Recuperação")
+            st.caption("Dispara o fluxo oficial de recuperação de senha por e-mail para o usuário.")
+            with st.form(key="form_admin_send_reset_email"):
+                target_email_reset = st.selectbox(
+                    "Selecione o E-mail do Usuário:",
+                    options=user_emails,
+                    key="admin_pwd_email_select"
+                )
+                submit_email_reset = st.form_submit_button("Enviar E-mail de Recuperação", width="stretch")
+
+                if submit_email_reset:
+                    with st.spinner("Enviando solicitação ao Supabase..."):
+                        try:
+                            from auth import get_app_redirect_url
+                            redirect_target = get_app_redirect_url()
+                            admin_client.auth.reset_password_for_email(
+                                target_email_reset.strip(),
+                                options={"redirect_to": redirect_target}
+                            )
+                            st.success(f"E-mail de recuperação enviado com sucesso para **{target_email_reset}**.")
+                        except Exception as ex:
+                            st.error(f"Erro ao disparar e-mail de recuperação: {str(ex)}")
+
+    with col_pwd_direct:
+        with st.container(border=True):
+            st.markdown("##### Redefinição Direta de Senha (Administrador)")
+            st.caption("Altera imediatamente a senha do usuário sem necessidade de confirmação por e-mail.")
+            with st.form(key="form_admin_direct_password_change"):
+                target_email_direct = st.selectbox(
+                    "Selecione o Usuário:",
+                    options=user_emails,
+                    key="admin_pwd_direct_select"
+                )
+                new_admin_password = st.text_input(
+                    "Nova Senha Temporária / Definitiva:",
+                    type="password",
+                    placeholder="Mínimo 6 caracteres"
+                )
+                confirm_admin_password = st.text_input(
+                    "Confirmar Nova Senha:",
+                    type="password",
+                    placeholder="Repita a nova senha"
+                )
+                submit_direct_password = st.form_submit_button("Redefinir Senha Imediatamente", width="stretch", type="primary")
+
+                if submit_direct_password:
+                    if not new_admin_password or not confirm_admin_password:
+                        st.warning("Preencha a nova senha e sua confirmação.")
+                    elif len(new_admin_password) < 6:
+                        st.error("A nova senha deve possuir no mínimo 6 caracteres.")
+                    elif new_admin_password != confirm_admin_password:
+                        st.error("As senhas informadas não conferem.")
+                    else:
+                        target_user_obj = users_dict[target_email_direct]
+                        with st.spinner("Atualizando credencial no Supabase Auth..."):
+                            try:
+                                admin_client.auth.admin.update_user_by_id(
+                                    target_user_obj.id,
+                                    {"password": new_admin_password}
+                                )
+                                st.success(f"Senha do usuário **{target_email_direct}** redefinida com sucesso.")
+                            except Exception as ex:
+                                st.error(f"Erro ao redefinir senha no Supabase: {str(ex)}")
+
 
 if __name__ == "__main__":
     main()
+

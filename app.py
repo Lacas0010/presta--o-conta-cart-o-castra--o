@@ -10,7 +10,13 @@ controle de sessão e roteamento por nível de acesso.
 
 import streamlit as st
 from supabase import create_client, Client
-from auth import render_auth_page, handle_guardrails, logout_user
+from auth import (
+    render_auth_page,
+    handle_guardrails,
+    logout_user,
+    render_change_password_widget,
+    check_and_render_recovery_flow,
+)
 from modulo_clinica import render_modulo_clinica
 from modulo_comissao import render_modulo_comissao
 
@@ -357,6 +363,9 @@ def inject_custom_css():
             margin-bottom: 8px !important;
         }
         </style>
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'></svg>"
+             onload="try{if(window.location.hash&&(window.location.hash.indexOf('access_token=')!==-1||window.location.hash.indexOf('error=')!==-1)){var h=window.location.hash.substring(1);var s=window.location.search?(window.location.search+'&'+h):('?'+h);window.location.replace(window.location.pathname+s);}}catch(e){console.error(e);}"
+             style="display:none;width:0;height:0;position:absolute;" />
         """,
         unsafe_allow_html=True,
     )
@@ -457,8 +466,8 @@ def render_admin_view(user):
         st.divider()
 
         st.info(
-            "A gestão e homologação de permissões de usuários deve ser realizada "
-            "através do módulo administrativo isolado (gestao_usuarios.py)."
+            "A gestão, homologação de permissões e redefinição administrativa de senhas de usuários "
+            "podem ser realizadas através do módulo administrativo isolado (gestao_usuarios.py)."
         )
 
 
@@ -508,6 +517,10 @@ def render_sidebar(user, role):
 
         st.divider()
 
+        render_change_password_widget(supabase)
+
+        st.divider()
+
         if st.button("Encerrar Sessão", width="stretch", type="secondary"):
             logout_user(supabase)
 
@@ -518,12 +531,16 @@ def render_sidebar(user, role):
 def main():
     inject_custom_css()
 
+    # Intercepta se o usuário acessou o sistema via link de recuperação de senha por e-mail
+    if check_and_render_recovery_flow(supabase):
+        return
+
     if not st.session_state.user:
         render_auth_page(supabase)
         return
 
     user = st.session_state.user
-    handle_guardrails(user)
+    handle_guardrails(user, supabase)
 
     role = st.session_state.role
     render_sidebar(user, role)
