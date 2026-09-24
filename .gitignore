@@ -34,7 +34,6 @@ venv.bak/
 # Streamlit & Credenciais Sensíveis
 # =============================================================================
 .streamlit/secrets.toml
-.streamlit/config.toml
 .env
 .env.*
 *.env
