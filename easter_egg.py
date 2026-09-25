@@ -1029,16 +1029,20 @@ def inject_easter_egg():
                     ghost.x = gCenterX;
                     ghost.y = gCenterY;
 
-                    // Se for modo EATEN e chegou na entrada da casa (col 9, row 8), desce para renascer
+                    // Se for modo EATEN e chegou na entrada da casa (col 9, row 8 ou 9), desce pelo portão
                     if (ghost.state === 'EATEN' && gCol === 9 && (gRow === 8 || gRow === 9)) {
                         ghost.dirX = 0;
                         ghost.dirY = 1;
-                        if (gRow >= 10) {
-                            // Renasceu! Volta ao jogo imediatamente
-                            ghost.state = currentGlobalMode;
-                            ghost.inHouse = true;
-                            ghost.exitTimer = 30;
-                        }
+                        return;
+                    }
+
+                    // Se o fantasma no modo EATEN chegou dentro da casa (row >= 10), RENASCE!
+                    if (ghost.state === 'EATEN' && gRow >= 10 && (gCol >= 8 && gCol <= 10)) {
+                        ghost.state = (frightenedTimer > 0) ? 'FRIGHTENED' : currentGlobalMode;
+                        ghost.inHouse = true;
+                        ghost.exitTimer = 35;
+                        ghost.dirX = 0;
+                        ghost.dirY = -1;
                         return;
                     }
 
