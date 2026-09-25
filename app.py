@@ -19,6 +19,7 @@ from auth import (
 )
 from modulo_clinica import render_modulo_clinica
 from modulo_comissao import render_modulo_comissao
+from easter_egg import inject_easter_egg
 
 
 # -----------------------------------------------------------------------------
@@ -527,6 +528,7 @@ def render_sidebar(user, role):
 # -----------------------------------------------------------------------------
 def main():
     inject_custom_css()
+    inject_easter_egg()
 
     # Intercepta se o usuário acessou o sistema via link de recuperação de senha por e-mail
     if check_and_render_recovery_flow(supabase):
