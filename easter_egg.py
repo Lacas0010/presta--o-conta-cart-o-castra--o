@@ -32,7 +32,7 @@ Regras Oficiais Implementadas:
 =============================================================================
 """
 
-import streamlit.components.v1 as components
+import streamlit as st
 
 
 def inject_easter_egg():
@@ -43,8 +43,8 @@ def inject_easter_egg():
     html_code = """
     <script>
     (function() {
-        const topDoc = window.parent.document;
-        const topWin = window.parent;
+        const topDoc = (typeof window !== 'undefined' && window.parent && window.parent.document) ? window.parent.document : document;
+        const topWin = (typeof window !== 'undefined' && window.parent) ? window.parent : window;
 
         if (!topDoc) return;
 
@@ -1475,4 +1475,9 @@ def inject_easter_egg():
     })();
     </script>
     """
-    components.html(html_code, height=0, width=0)
+
+    if hasattr(st, "html"):
+        st.html(html_code)
+    else:
+        import streamlit.components.v1 as components
+        components.html(html_code, height=0, width=0)
