@@ -983,7 +983,9 @@ def inject_easter_egg():
                     ghost.inHouse = false;
                     ghost.dirX = -1;
                     ghost.dirY = 0;
-                    ghost.state = (frightenedTimer > 0) ? 'FRIGHTENED' : currentGlobalMode;
+                    if (ghost.state !== 'FRIGHTENED') {
+                        ghost.state = currentGlobalMode;
+                    }
                     return;
                 }
 
@@ -1036,9 +1038,10 @@ def inject_easter_egg():
                         return;
                     }
 
-                    // Se o fantasma no modo EATEN chegou dentro da casa (row >= 10), RENASCE IMEDIATAMENTE!
+                    // Se o fantasma no modo EATEN chegou dentro da casa (row >= 10), RENASCE IMEDIATAMENTE NO MODO NORMAL!
+                    // Regra Toru Iwatani 1980: O fantasma devorado NUNCA renasce azul na mesma pílula (evita spawn camping).
                     if (ghost.state === 'EATEN' && gRow >= 10 && (gCol >= 8 && gCol <= 10)) {
-                        ghost.state = (frightenedTimer > 0) ? 'FRIGHTENED' : currentGlobalMode;
+                        ghost.state = currentGlobalMode;
                         ghost.inHouse = true;
                         ghost.exitTimer = 0; // Respawn instantâneo original do arcade
                         ghost.dirX = 0;
