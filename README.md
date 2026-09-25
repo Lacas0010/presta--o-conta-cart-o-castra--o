@@ -30,6 +30,7 @@ A plataforma digitaliza e integra integralmente o fluxo de prestação de contas
 ├── auditoria.py                   # Registro e consulta padronizada da trilha de auditoria
 ├── gerador_pdf.py                 # Motor de geração de PDFs oficiais (Anexo V, Parecer SEPAN e Texto SEI)
 ├── gestao_usuarios.py             # Módulo administrativo para homologação de perfis e gestão de acessos
+├── easter_egg.py                  # Easter Egg Arcade Pac-Man '80 (Canvas 2D, IA Clássica, CRT Filter e Konami Code)
 ├── schema.sql                     # Script SQL (Tabelas, RLS, Políticas, Triggers, Índices e Configurações)
 ├── requirements.txt               # Dependências do ecossistema Python
 └── .gitignore                     # Diretivas de exclusão para versionamento seguro
@@ -90,6 +91,11 @@ A plataforma digitaliza e integra integralmente o fluxo de prestação de contas
 - **Redefinição Administrativa de Senhas**: Atualização de credenciais de usuários diretamente por administradores.
 - **Parametrização do Sistema**: Alternância (*toggle*) entre modo de validação rígida de documentos (CPF/CNPJ) e modo flexível para testes.
 
+### 5. Easter Egg Retro Arcade (Pac-Man 1980) (`easter_egg.py`)
+- **Ativação Exclusiva**: Desbloqueado globalmente em qualquer tela via **Código Konami** no teclado: `↑ ↑ ↓ ↓ ← → ← → B A`.
+- **Fidelidade Mecânica**: Inteligência artificial idêntica ao arcade clássico de 1980 (Blinky perseguidor com *Cruise Elroy*, Pinky emboscadora, Inky flanqueador em pinça e Clyde covarde), ciclos de *Scatter/Chase*, modo assustado, respawn e frutas bônus (Cereja).
+- **Aparência Retro CRT**: Filtro com scanlines, curvatura de tubo, bloom de fósforo e áudio Chiptune 8-bit sintetizado via Web Audio API.
+
 ---
 
 ## Tecnologias Empregadas
@@ -100,6 +106,7 @@ A plataforma digitaliza e integra integralmente o fluxo de prestação de contas
 - **Processamento de Dados**: Pandas
 - **Geração de Documentos**: FPDF2 (Relatórios em PDF)
 - **Validação de Documentos**: validate-docbr
+- **Frontend & Arcade Engine**: HTML5 Canvas 2D, JavaScript puro a 60 FPS e Web Audio API
 - **Design System**: Vanilla CSS institucional com suporte a temas Claro e Escuro, tipografia Inter e microanimações.
 
 ---

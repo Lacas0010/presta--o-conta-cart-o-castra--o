@@ -1036,11 +1036,11 @@ def inject_easter_egg():
                         return;
                     }
 
-                    // Se o fantasma no modo EATEN chegou dentro da casa (row >= 10), RENASCE!
+                    // Se o fantasma no modo EATEN chegou dentro da casa (row >= 10), RENASCE IMEDIATAMENTE!
                     if (ghost.state === 'EATEN' && gRow >= 10 && (gCol >= 8 && gCol <= 10)) {
                         ghost.state = (frightenedTimer > 0) ? 'FRIGHTENED' : currentGlobalMode;
                         ghost.inHouse = true;
-                        ghost.exitTimer = 35;
+                        ghost.exitTimer = 0; // Respawn instantâneo original do arcade
                         ghost.dirX = 0;
                         ghost.dirY = -1;
                         return;
